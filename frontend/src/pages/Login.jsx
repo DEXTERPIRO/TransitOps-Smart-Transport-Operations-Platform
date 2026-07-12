@@ -10,7 +10,7 @@ import Logo from '../components/ui/Logo';
 const DEMO_USERS = [
   { label: 'Fleet Manager', email: 'fleet@transitops.com',
     password: 'Fleet@123', color: 'text-[var(--accent)]' },
-  { label: 'Dispatcher', email: 'dispatch@transitops.com',
+  { label: 'Dispatcher', email: 'meetc8030@gmail.com',
     password: 'Dispatch@123', color: 'text-blue-500 dark:text-blue-400' },
   { label: 'Safety Officer', email: 'safety@transitops.com',
     password: 'Safety@123', color: 'text-amber-500 dark:text-amber-400' },

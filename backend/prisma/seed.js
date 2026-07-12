@@ -21,7 +21,7 @@ async function main() {
     password: await pass('Fleet@123'), role: 'FLEET_MANAGER'
   }});
   const dispatch = await prisma.user.create({ data: {
-    name: 'Dispatcher', email: 'dispatch@transitops.com',
+    name: 'Dispatcher', email: 'meetc8030@gmail.com',
     password: await pass('Dispatch@123'), role: 'DISPATCHER'
   }});
   const safety = await prisma.user.create({ data: {
@@ -170,7 +170,7 @@ async function main() {
 
   console.log('✅ TransitOps database seeded successfully!');
   console.log('Fleet Manager:  fleet@transitops.com / Fleet@123');
-  console.log('Dispatcher:     dispatch@transitops.com / Dispatch@123');
+  console.log('Dispatcher:     meetc8030@gmail.com / Dispatch@123');
   console.log('Safety Officer: safety@transitops.com / Safety@123');
   console.log('Finance:        finance@transitops.com / Finance@123');
 }
