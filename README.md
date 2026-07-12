@@ -385,14 +385,14 @@ To handle local development port redirection dynamically, the API backend config
 2. **Configure Environment Variables**
    Create a `.env` file in the `backend/` directory:
    ```env
-   DATABASE_URL="postgresql://postgres:postgres123@localhost:5432/transitops"
-   JWT_SECRET="transitops_jwt_secret_2024"
-   JWT_REFRESH_SECRET="transitops_refresh_2024"
+   DATABASE_URL="postgresql://username:password@localhost:5432/transitops"
+   JWT_SECRET="your_jwt_access_secret_key"
+   JWT_REFRESH_SECRET="your_jwt_refresh_secret_key"
    PORT=5000
    FRONTEND_URL="http://localhost:5173"
-   EMAIL_USER="strangegaming66@gmail.com"
-   EMAIL_PASS="xuthwmbdmsgembpz"
-   GROQ_API_KEY="gsk_7K66w2Njv..."
+   EMAIL_USER="your_email@gmail.com"
+   EMAIL_PASS="your_gmail_app_password"
+   GROQ_API_KEY="your_groq_api_key_here"
    ```
 
    ### Environment Variables Specifications
@@ -404,8 +404,8 @@ To handle local development port redirection dynamically, the API backend config
    | `JWT_REFRESH_SECRET` | JSON Web Refresh Token Secret | Cryptographic key used to sign long-lived refresh tokens (7-day duration) stored in secure cookies, allowing users to renew expired sessions seamlessly. |
    | `PORT` | API Server Host Port | The network port the Express application server binds to. All API requests and Socket.io WebSocket connections route to `http://localhost:5000`. |
    | `FRONTEND_URL` | Authorized Client Origin | The origin URL of the Vite React frontend. Backend CORS middleware whitelists this URL to prevent requests from being blocked by web browser origin policies. |
-   | `EMAIL_USER` | SMTP Notification Sender Email | The Gmail address (`strangegaming66@gmail.com`) utilized by Nodemailer SMTP transport to send automated temporary passwords when resetting dispatch accounts. |
-   | `EMAIL_PASS` | SMTP Sender App Password | The secure Google-generated App Password (`xuthwmbdmsgembpz`) that permits Nodemailer to securely connect and authenticate SMTP requests. |
+   | `EMAIL_USER` | SMTP Notification Sender Email | The Gmail address utilized by Nodemailer SMTP transport to send automated temporary passwords when resetting dispatch accounts. |
+   | `EMAIL_PASS` | SMTP Sender App Password | The secure Google-generated App Password that permits Nodemailer to securely connect and authenticate SMTP requests. |
    | `GROQ_API_KEY` | Groq AI Service API Token | The API authentication key used by the Groq SDK client to query the AI assistant model for natural language database operations. |
 
 3. **Initialize Database**
