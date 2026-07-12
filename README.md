@@ -9,117 +9,234 @@
 [![Socket.io](https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socketdotio&logoColor=white)](https://socket.io/)
 [![JWT Auth](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
 
-TransitOps is a enterprise-grade full-stack fleet management and smart transport operations platform designed to streamline vehicle logistics, driver compliance, route scheduling, predictive maintenance, and real-time operations telemetry.
+TransitOps is an enterprise-grade, full-stack fleet management and smart transport operations platform designed to optimize vehicle logistics, driver compliance, route scheduling, predictive maintenance, and real-time operations telemetry. It provides operations teams with a single pane of glass to oversee complex transport environments.
 
 ---
 
-## System Modules
+## Technical Architecture
 
-### Fleet Management
-* Track and manage vehicle assets, registration details, maximum payload capacities, and current odometers.
-* Categorize vehicles by type (Vans, Trucks, Buses, Bikes, Cars).
-* View status indicators (Available, On Trip, In Shop, Retired) for live allocation.
-
-### Driver Management
-* Comprehensive profiles including license numbers, verification statuses, and historical safety scores.
-* Smart validation guards that prevent suspended or expired drivers from being dispatched on active routes.
-
-### Real-Time Dispatch and Map Routing
-* Live vehicle routing and geolocational updates driven by Leaflet.js interactive map layers.
-* Real-time dispatch board that transmits active route updates to drivers using Socket.io web sockets.
-
-### Maintenance and Predictive Alerts
-* Service logs tracking maintenance costs, service dates, and repair descriptions.
-* Predictive maintenance module that monitors odometer mileage and flags warning alerts for vehicles exceeding 10,000 km since their last service.
-
-### Fuel and Expense Analytics
-* Fuel log tracker calculating exact consumption efficiency (km/liter) and fueling costs.
-* Categorized operational expenses (Tolls, Parking, Repairs, and miscellaneous items) to capture total cost of ownership.
-
-### Automated Reports Export
-* Dynamic analytical charting illustrating Monthly Revenue flows and Vehicle ROI (Return on Investment) statistics using Recharts.
-* Server-side PDF and CSV generation helpers to export active records instantly.
-
----
-
-## Role-Based Access Control
-
-The platform enforces strict role-based access control (RBAC) across all endpoints and UI views:
-
-| Role | Permitted Actions | Accessible Sections |
-|---|---|---|
-| Fleet Manager | Full administrative access, user creation, assets management | Fleet, Maintenance, Drivers, Dashboard, Reports, Settings |
-| Dispatcher | Trip creation, route assignment, live dispatch controls | Dashboard, Fleet, Drivers, Trips |
-| Safety Officer | Driver verification, compliance checking, license auditing | Dashboard, Drivers, Compliance |
-| Financial Analyst | Cost tracking, fuel analytics, ROI evaluations | Dashboard, Fuel, Expenses, Reports |
-
-### Demo Credentials
-
-| Role | Email | Password |
-|---|---|---|
-| Fleet Manager | fleet@transitops.com | Fleet@123 |
-| Dispatcher | dispatch@transitops.com | Dispatch@123 |
-| Safety Officer | safety@transitops.com | Safety@123 |
-| Financial Analyst | finance@transitops.com | Finance@123 |
-
----
-
-## API Reference
-
-### Authentication Endpoints
-* `POST /api/auth/login` - Authenticates user credentials and sets HttpOnly refresh cookies.
-* `POST /api/auth/refresh` - Reissues JSON Web Access Tokens using secure refresh sessions.
-* `POST /api/auth/logout` - Revokes session cookies and logs user out.
-* `POST /api/auth/forgot-password` - Generates a temporary reset password and emails it to the user.
-* `GET /api/auth/me` - Retrieves profile details of the active authenticated session.
-
-### Fleet & Operations Endpoints
-* `GET /api/vehicles` - List vehicle assets (supports pagination, filtering, and search).
-* `POST /api/vehicles` - Register new vehicle to the fleet.
-* `GET /api/drivers` - Retrieve driver logs and compliance safety scores.
-* `POST /api/trips` - Create a dispatch request.
-* `PUT /api/trips/:id/dispatch` - Transition trip status to active and send web socket alerts.
-* `PUT /api/trips/:id/complete` - Log completed odometer changes and trip revenue.
-
-### Reporting & AI Endpoints
-* `GET /api/reports/analytics` - Get aggregated revenue, fuel, and trip metrics.
-* `GET /api/reports/export/pdf` - Generates server-side PDF report containing complete financial charts.
-* `POST /api/ai/chat` - Queries the AI helper using dynamic context from the PostgreSQL database.
-
----
-
-## Project Structure
+The platform uses a decoupled client-server architecture built on Node.js and React:
 
 ```
-TransitOps/
-├── backend/
-│   ├── prisma/             # Database schema definition and seed scripts
-│   ├── src/
-│   │   ├── controllers/    # Route controllers handling business logic
-│   │   ├── middleware/     # Auth checks, rate limiters, validation guards
-│   │   ├── routes/         # Express endpoint definitions
-│   │   └── utils/          # PDF generator, mailer setup, and AI logic
-│   ├── server.js           # Server initialization and Socket.io binding
-│   └── .env                # Server credentials (gitignored)
-│
-└── frontend/
-    ├── src/
-    │   ├── api/            # API client wrappers using Axios
-    │   ├── components/     # Reusable layout shells, charts, and badging
-    │   ├── pages/          # View entrypoints (Dashboard, Reports, Fleet, etc.)
-    │   ├── store/          # Zustand global states
-    │   └── App.jsx         # Router configuration and state provider definitions
+[ Frontend Client (React) ]
+      │ (HTTP REST / JSON)  ◄── Axios Client with JWT Refresh Interceptors
+      ▼
+[ API Gateway / Express Server ]
+      │ (CORS Multi-Origin) ◄── Allows localhost:5173 and localhost:5174
+      ├──────────────────────── Socket.io WebSocket Server (Real-time telemetry)
+      ▼
+[ Database Access Layer (Prisma) ]
+      │ (Connection Pooling)
+      ▼
+[ Relational Database (PostgreSQL) ]
 ```
+
+---
+
+## Detailed System Modules
+
+### 1. Fleet & Asset Management
+* Track vehicle metadata, registration numbers, loading capacities, acquisition costs, and current odometers.
+* Supported Vehicle Types: Van, Truck, Bus, Bike, Car.
+* Vehicle Status Engine:
+  * Available: Ready to be dispatched.
+  * On Trip: Locked and currently assigned to an active route.
+  * In Shop: Locked in maintenance status; cannot be assigned to new trips.
+  * Retired: Decommissioned from the active fleet.
+
+### 2. Driver Registry & Compliance
+* Profiles tracking driver license numbers, safety scores (0-100), and status (Available, On Trip, Off Duty, Suspended).
+* Dispatch Safety Guards:
+  * Prevents selection of suspended drivers.
+  * Checks for expired status before confirming route dispatch.
+  * Integrates real-time badge visualization using high-contrast styling in light and dark modes.
+
+### 3. Route Scheduling & Dispatch Board
+* Route mapping driven by Leaflet.js interactive maps.
+* Live dispatcher dashboard that controls active route transitions.
+* Instant update distribution using Socket.io:
+  * When a trip is dispatched, status coordinates broadcast to the general dashboard dashboard room.
+  * Individual trip rooms (`trip-{id}`) receive targeted telemetry updates.
+
+### 4. Predictive Maintenance Alert Engine
+* Service logs tracking maintenance dates, cost calculations, and service types.
+* Predictive Odometer Checking:
+  * The backend scans vehicle odometers relative to their last recorded service.
+  * If a vehicle surpasses 10,000 km since its last service, it registers a predictive warning alert.
+  * If it surpasses 15,000 km, the warning escalates to a high-priority service request.
+
+### 5. Financial & Fuel Analytics
+* Fuel log tracker calculating exact fuel efficiency (km/liter) and costs.
+* Categorized operational expenses (Tolls, Parking, Repairs, and miscellaneous items).
+* Dynamic analytics dashboard using Recharts featuring Monthly Revenue trends, fuel usage, and vehicle ROI charts.
+* Rupee font fallbacks (`Rs.` and `₹` font stacks) integrated into index.css and PDF exports.
+
+### 6. AI Operations Assistant
+* An on-demand LLM chatbot powered by Groq.
+* Connects directly to the PostgreSQL database using Prisma schema metadata.
+* Allows operators to query database stats (e.g. "What is our highest earning truck?" or "Show pending maintenance alerts") in plain natural language.
+
+---
+
+## Database Schema (Prisma Models)
+
+```prisma
+enum Role {
+  FLEET_MANAGER
+  DISPATCHER
+  SAFETY_OFFICER
+  FINANCIAL_ANALYST
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  password     String
+  role         Role
+  region       String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  trips        Trip[]
+}
+
+model Vehicle {
+  id               String        @id @default(uuid())
+  registrationNo   String        @unique
+  name             String
+  type             VehicleType
+  maxLoadCapacity  Float
+  odometer         Float         @default(0)
+  acquisitionCost  Float
+  region           String?
+  status           VehicleStatus @default(AVAILABLE)
+  isActive         Boolean       @default(true)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  trips            Trip[]
+  maintenanceLogs  MaintenanceLog[]
+  fuelLogs         FuelLog[]
+  expenses         Expense[]
+}
+
+model Driver {
+  id           String       @id @default(uuid())
+  name         String
+  email        String       @unique
+  phone        String
+  licenseNo    String       @unique
+  status       DriverStatus @default(AVAILABLE)
+  safetyScore  Float        @default(100)
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  trips        Trip[]
+}
+
+model Trip {
+  id              String     @id @default(uuid())
+  tripCode        String     @unique
+  source          String
+  destination     String
+  status          TripStatus @default(DRAFT)
+  cargoWeight     Float
+  plannedDistance Float
+  actualDistance  Float?
+  revenue         Float?
+  fuelConsumed    Float?
+  vehicleId       String
+  vehicle         Vehicle    @relation(fields: [vehicleId], references: [id])
+  driverId        String
+  driver          Driver     @relation(fields: [driverId], references: [id])
+  dispatchedById  String
+  dispatchedBy    User       @relation(fields: [dispatchedById], references: [id])
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+```
+
+---
+
+## Role-Based Access Matrix
+
+The platform enforces strict client-side routing blocks and server-side middleware validation:
+
+| View / Module | Fleet Manager | Dispatcher | Safety Officer | Financial Analyst |
+|---|:---:|:---:|:---:|:---:|
+| Operations Dashboard | Yes | Yes | Yes | Yes |
+| Fleet Fleet Management | Yes | Yes | No | No |
+| Driver Management | Yes | Yes | Yes | No |
+| Trip Dispatch Board | Yes | Yes | No | No |
+| Maintenance Logs | Yes | No | No | No |
+| Fuel & Expense Logs | Yes | No | No | Yes |
+| Financial Reports | Yes | No | No | Yes |
+| System Settings | Yes | No | No | No |
+
+---
+
+## API Documentation Examples
+
+### 1. User Login
+* **URL**: `/api/auth/login`
+* **Method**: `POST`
+* **Request Body**:
+  ```json
+  {
+    "email": "fleet@transitops.com",
+    "password": "Fleet@123"
+  }
+  ```
+* **Success Response (200 OK)**:
+  ```json
+  {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsIn...",
+    "user": {
+      "id": "7ca64b-e85d-4f10-91a...",
+      "name": "Fleet Manager",
+      "email": "fleet@transitops.com",
+      "role": "FLEET_MANAGER"
+    }
+  }
+  ```
+
+### 2. Forgot Password Request
+* **URL**: `/api/auth/forgot-password`
+* **Method**: `POST`
+* **Request Body**:
+  ```json
+  {
+    "email": "fleet@transitops.com"
+  }
+  ```
+* **Success Response (200 OK)**:
+  ```json
+  {
+    "message": "Temporary password sent to your email."
+  }
+  ```
+
+### 3. Generate Trip Dispatch
+* **URL**: `/api/trips`
+* **Method**: `POST`
+* **Request Body**:
+  ```json
+  {
+    "tripCode": "TR007",
+    "source": "Mumbai",
+    "destination": "Pune",
+    "vehicleId": "v-uuid-1234",
+    "driverId": "d-uuid-5678",
+    "cargoWeight": 450,
+    "plannedDistance": 150
+  }
+  ```
 
 ---
 
 ## Getting Started
 
-### Prerequisites
-* Node.js v18 or above
-* PostgreSQL database instance running locally or on cloud
-
-### Installation Steps
+### Installation & Setup
 
 1. **Clone the Repository**
    ```bash
@@ -127,13 +244,21 @@ TransitOps/
    cd TransitOps-Smart-Transport-Operations-Platform
    ```
 
-2. **Configure Backend Settings**
-   * Navigate to the `backend` directory.
-   * Copy `.env.example` into a new `.env` file.
-   * Update the `DATABASE_URL` string to connect to your PostgreSQL instance.
-   * Provide valid `EMAIL_USER` and `EMAIL_PASS` credentials for Nodemailer password recovery.
+2. **Configure Environment Variables**
+   Create a `.env` file in the `backend/` directory:
+   ```env
+   DATABASE_URL="postgresql://postgres:postgres123@localhost:5432/transitops"
+   JWT_SECRET="transitops_jwt_secret_2024"
+   JWT_REFRESH_SECRET="transitops_refresh_2024"
+   PORT=5000
+   FRONTEND_URL="http://localhost:5173"
+   EMAIL_USER="strangegaming66@gmail.com"
+   EMAIL_PASS="xuthwmbdmsgembpz"
+   GROQ_API_KEY="gsk_7K66w2Njv..."
+   ```
 
-3. **Install Dependencies and Setup Database**
+3. **Initialize Database**
+   Install packages and execute migrations to generate the PostgreSQL tables:
    ```bash
    cd backend
    npm install
@@ -141,19 +266,45 @@ TransitOps/
    npm run seed
    ```
 
-4. **Start the Backend Server**
+4. **Start backend Node Server**
    ```bash
    npm run dev
    ```
 
-5. **Start the Frontend Client**
-   * Open a new terminal window.
-   * Navigate to the `frontend` directory.
-   * Install client modules and start the Vite dev server.
+5. **Start Frontend Vite Client**
+   Open a new terminal shell:
    ```bash
    cd frontend
    npm install
    npm run dev
    ```
 
-The frontend client will now be accessible at `http://localhost:5173` (or `http://localhost:5174` if port 5173 is occupied). All API operations route to `http://localhost:5000/api`.
+---
+
+## Troubleshooting & Port Allocation
+
+### Stale Node Process Termination (Windows)
+If you get `Error: listen EADDRINUSE: address already in use :::5000` when running the backend, it means a background process is already occupying port 5000. 
+
+1. Find the process ID (PID) holding port 5000:
+   ```powershell
+   netstat -ano | findstr :5000
+   ```
+2. Kill the process (replace `PID` with the actual number found, e.g. 10688):
+   ```powershell
+   taskkill /F /PID PID
+   ```
+
+### Vite Port Collision and CORS Mismatch
+If Vite starts the frontend on `http://localhost:5174` because port 5173 was busy, you might face a CORS blocking error during login. 
+
+The backend CORS settings are configured to accept requests from both `localhost:5173` and `localhost:5174` by default. If you need to add custom local network IPs, update the `allowedOrigins` array inside `backend/server.js`:
+```javascript
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174'
+].filter(Boolean);
+```
