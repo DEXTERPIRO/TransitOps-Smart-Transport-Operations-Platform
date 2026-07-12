@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-dark-950 text-dark-100 font-sans antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-dark-900;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-dark-600 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-dark-500;
+  }
+}
+
+@layer components {
+  /* Cards */
+  .card {
+    @apply bg-dark-800 border border-dark-700 rounded-xl p-5 shadow-lg;
+  }
+
+  .card-hover {
+    @apply card transition-all duration-200 hover:border-brand-500/50 hover:shadow-brand-500/10 hover:shadow-xl cursor-pointer;
+  }
+
+  /* Buttons */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-brand-500 hover:bg-brand-600 
+           text-white font-medium rounded-lg transition-all duration-150 
+           focus:outline-none focus:ring-2 focus:ring-brand-500/50 active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-dark-700 hover:bg-dark-600 
+           text-dark-100 font-medium rounded-lg transition-all duration-150 
+           border border-dark-600 focus:outline-none focus:ring-2 focus:ring-dark-500 active:scale-95;
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 
+           text-white font-medium rounded-lg transition-all duration-150 
+           focus:outline-none focus:ring-2 focus:ring-red-500/50 active:scale-95;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-3 py-2 hover:bg-dark-700 
+           text-dark-300 hover:text-dark-100 rounded-lg transition-all duration-150;
+  }
+
+  /* Inputs */
+  .input {
+    @apply w-full bg-dark-900 border border-dark-600 text-dark-100 placeholder-dark-500
+           rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 
+           focus:ring-brand-500/50 focus:border-brand-500 transition-colors;
+  }
+
+  .select {
+    @apply input cursor-pointer;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium;
+  }
+
+  .badge-green  { @apply badge bg-green-500/20  text-green-400; }
+  .badge-red    { @apply badge bg-red-500/20    text-red-400; }
+  .badge-yellow { @apply badge bg-yellow-500/20 text-yellow-400; }
+  .badge-blue   { @apply badge bg-blue-500/20   text-blue-400; }
+  .badge-orange { @apply badge bg-brand-500/20  text-brand-400; }
+  .badge-gray   { @apply badge bg-dark-600      text-dark-300; }
+
+  /* Table */
+  .table-header {
+    @apply text-xs font-semibold uppercase tracking-wider text-dark-400 
+           px-4 py-3 text-left border-b border-dark-700;
+  }
+
+  .table-cell {
+    @apply px-4 py-3 text-sm text-dark-200 border-b border-dark-800;
+  }
+
+  .table-row {
+    @apply hover:bg-dark-700/50 transition-colors;
+  }
+
+  /* Sidebar */
+  .nav-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
+           text-dark-400 hover:text-white hover:bg-dark-700 transition-all duration-150;
+  }
+
+  .nav-item-active {
+    @apply nav-item bg-brand-500/15 text-brand-400 hover:bg-brand-500/20 hover:text-brand-300;
+  }
+
+  /* Stat cards */
+  .stat-card {
+    @apply card flex items-center gap-4;
+  }
+
+  .stat-icon {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0;
+  }
+
+  /* Page header */
+  .page-header {
+    @apply flex items-center justify-between mb-6;
+  }
+
+  .page-title {
+    @apply text-2xl font-bold text-white;
+  }
+
+  .page-subtitle {
+    @apply text-sm text-dark-400 mt-0.5;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/5 backdrop-blur-md border border-white/10;
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-brand-400 to-brand-600 bg-clip-text text-transparent;
+  }
+
+  .glow {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.2);
+  }
+}
+
+/* Leaflet dark overrides */
+.leaflet-container {
+  background: #0f172a !important;
+}
+.leaflet-tile {
+  filter: brightness(0.75) saturate(0.8) hue-rotate(200deg);
+}
