@@ -395,6 +395,19 @@ To handle local development port redirection dynamically, the API backend config
    GROQ_API_KEY="gsk_7K66w2Njv..."
    ```
 
+   ### Environment Variables Specifications
+
+   | Variable Name | Purpose | Description & Configuration Guidelines |
+   |---|---|---|
+   | `DATABASE_URL` | PostgreSQL Connection URI | The connection string specifying host, port, database name, and credentials. Prisma ORM uses this link to sync schemas, perform migrations, and run queries against the PostgreSQL instance. |
+   | `JWT_SECRET` | JSON Web Access Token Secret | Cryptographic key utilized to sign short-lived access tokens (15-minute duration). Verified by Express middleware guards to authenticate API endpoints. |
+   | `JWT_REFRESH_SECRET` | JSON Web Refresh Token Secret | Cryptographic key used to sign long-lived refresh tokens (7-day duration) stored in secure cookies, allowing users to renew expired sessions seamlessly. |
+   | `PORT` | API Server Host Port | The network port the Express application server binds to. All API requests and Socket.io WebSocket connections route to `http://localhost:5000`. |
+   | `FRONTEND_URL` | Authorized Client Origin | The origin URL of the Vite React frontend. Backend CORS middleware whitelists this URL to prevent requests from being blocked by web browser origin policies. |
+   | `EMAIL_USER` | SMTP Notification Sender Email | The Gmail address (`strangegaming66@gmail.com`) utilized by Nodemailer SMTP transport to send automated temporary passwords when resetting dispatch accounts. |
+   | `EMAIL_PASS` | SMTP Sender App Password | The secure Google-generated App Password (`xuthwmbdmsgembpz`) that permits Nodemailer to securely connect and authenticate SMTP requests. |
+   | `GROQ_API_KEY` | Groq AI Service API Token | The API authentication key used by the Groq SDK client to query the AI assistant model for natural language database operations. |
+
 3. **Initialize Database**
    Install packages and execute migrations to generate the PostgreSQL tables:
    ```bash
