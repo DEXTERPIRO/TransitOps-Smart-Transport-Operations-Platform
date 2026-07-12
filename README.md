@@ -9,7 +9,9 @@
 [![Socket.io](https://img.shields.io/badge/Socket.io-010101?style=for-the-badge&logo=socketdotio&logoColor=white)](https://socket.io/)
 [![JWT Auth](https://img.shields.io/badge/JWT-000000?style=for-the-badge&logo=jsonwebtokens&logoColor=white)](https://jwt.io/)
 
-TransitOps is an enterprise-grade, full-stack fleet management and smart transport operations platform designed to optimize vehicle logistics, driver compliance, route scheduling, predictive maintenance, and real-time operations telemetry. It provides operations teams with a single pane of glass to oversee complex transport environments.
+TransitOps is an enterprise-grade, full-stack fleet management and smart transport operations platform designed to optimize vehicle logistics, driver compliance, route scheduling, predictive maintenance, and real-time operations telemetry. It provides logistics and operations teams with a single, synchronized platform to manage and monitor complex transport networks.
+
+---
 
 ## Screenshots
 
@@ -62,70 +64,79 @@ TransitOps is an enterprise-grade, full-stack fleet management and smart transpo
 
 ## Technical Architecture
 
-The platform uses a decoupled client-server architecture built on Node.js and React:
+The application enforces strict separation of concerns, separating the client layout engine from the backend data access controllers.
 
 ```
-[ Frontend Client (React) ]
-      │ (HTTP REST / JSON)  ◄── Axios Client with JWT Refresh Interceptors
-      ▼
-[ API Gateway / Express Server ]
-      │ (CORS Multi-Origin) ◄── Allows localhost:5173 and localhost:5174
-      ├──────────────────────── Socket.io WebSocket Server (Real-time telemetry)
-      ▼
-[ Database Access Layer (Prisma) ]
-      │ (Connection Pooling)
-      ▼
-[ Relational Database (PostgreSQL) ]
++---------------------------------------------------------------------------------+
+|                                 React Frontend                                  |
+|  [Zustand Stores] ◄──► [Components & Views] ◄──► [Axios Interceptors / HTTP]     |
++----------------------------------------┬----------------------------------------+
+                                         │ JSON HTTP Requests / JWT Bearer
+                                         ▼
++---------------------------------------------------------------------------------+
+|                             Express Backend Gateway                             |
+|  [Auth Validation Guard] ◄──► [Controllers Layer] ◄──► [Socket.io Event Hub]   |
++----------------------------------------┬----------------------------------------+
+                                         │ Database Connections / Prisma ORM
+                                         ▼
++---------------------------------------------------------------------------------+
+|                                PostgreSQL DB                                    |
+|  [Users Table] ◄──► [Vehicles] ◄──► [Drivers] ◄──► [Trips] ◄──► [Maintenance]   |
++---------------------------------------------------------------------------------+
 ```
+
+---
+
+## System Design Philosophy
+
+### Neumorphic UI / UX Design
+The frontend layout departs from standard flat aesthetics in favor of a skeuomorphic and neumorphic visual system:
+* Recessed Inputs: Interactive forms feature inset shadows simulating tactile physically-indented components.
+* Raised Panels: Containers and UI panels feature soft drop shadows to represent raised control boards.
+* Textured Gradients: Panels use dark and light gradients combined with a global fractal SVG noise filter overlay layer (5% opacity in dark mode, 15% opacity in light mode) to replicate concrete industrial materials.
+* Typography: Mono-spaced, high-tech engineering typefaces are utilized for operational statistics and KPI data.
 
 ---
 
 ## Detailed System Modules
 
-### 1. Fleet & Asset Management
-* Track vehicle metadata, registration numbers, loading capacities, acquisition costs, and current odometers.
-* Supported Vehicle Types: Van, Truck, Bus, Bike, Car.
-* Vehicle Status Engine:
-  * Available: Ready to be dispatched.
-  * On Trip: Locked and currently assigned to an active route.
-  * In Shop: Locked in maintenance status; cannot be assigned to new trips.
-  * Retired: Decommissioned from the active fleet.
+### 1. Fleet & Vehicle Tracking
+* Dynamic tracking of registration numbers, odometer mileage, acquisition costs, vehicle status, and assigned regions.
+* Supported Vehicle Status Engine:
+  * `AVAILABLE`: Vehicle is ready and idle for dispatching.
+  * `ON_TRIP`: Vehicle is locked and assigned to an active trip.
+  * `IN_SHOP`: Vehicle is undergoing repair and locked from dispatching.
+  * `RETIRED`: Vehicle is permanently deactivated.
 
-### 2. Driver Registry & Compliance
-* Profiles tracking driver license numbers, safety scores (0-100), and status (Available, On Trip, Off Duty, Suspended).
-* Dispatch Safety Guards:
-  * Prevents selection of suspended drivers.
-  * Checks for expired status before confirming route dispatch.
-  * Integrates real-time badge visualization using high-contrast styling in light and dark modes.
+### 2. Driver Registry & Validation
+* Driver metadata tracking license numbers, safety scores (scale of 0-100), and availability.
+* Strict validation guards prevent suspended or expired drivers from being assigned to any active dispatches.
+* Odometer compliance: Logs active vehicle odometer mileage upon route assignment.
 
-### 3. Route Scheduling & Dispatch Board
-* Route mapping driven by Leaflet.js interactive maps.
-* Live dispatcher dashboard that controls active route transitions.
-* Instant update distribution using Socket.io:
-  * When a trip is dispatched, status coordinates broadcast to the general dashboard dashboard room.
-  * Individual trip rooms (`trip-{id}`) receive targeted telemetry updates.
+### 3. Route Dispatch Board
+* Route planning coordinates resolved in real-time using Leaflet.js interactive maps.
+* Live status board for trip state tracking (`DRAFT` -> `DISPATCHED` -> `COMPLETED` / `CANCELLED`).
+* WebSockets (Socket.io) broadcast real-time location telemetry to all active dashboard clients, eliminating the need for polling.
 
 ### 4. Predictive Maintenance Alert Engine
-* Service logs tracking maintenance dates, cost calculations, and service types.
-* Predictive Odometer Checking:
-  * The backend scans vehicle odometers relative to their last recorded service.
-  * If a vehicle surpasses 10,000 km since its last service, it registers a predictive warning alert.
-  * If it surpasses 15,000 km, the warning escalates to a high-priority service request.
+* Scans odometer progression from the database.
+* Identifies mileage delta since the last recorded maintenance log for every vehicle:
+  * Delta > 10,000 km: Triggers a medium-priority warning alert.
+  * Delta > 15,000 km: Triggers a high-priority warning alert requesting immediate service.
 
-### 5. Financial & Fuel Analytics
-* Fuel log tracker calculating exact fuel efficiency (km/liter) and costs.
-* Categorized operational expenses (Tolls, Parking, Repairs, and miscellaneous items).
-* Dynamic analytics dashboard using Recharts featuring Monthly Revenue trends, fuel usage, and vehicle ROI charts.
-* Rupee font fallbacks (`Rs.` and `₹` font stacks) integrated into index.css and PDF exports.
+### 5. Fuel & Expense Accounting
+* Fuel logs calculate vehicle fuel efficiency (km/liter) and costs.
+* Categorized operational expenses (Tolls, Parking, Repair, and Miscellaneous).
+* Recharts integration plots revenue streams and top vehicle ROI.
+* PDF reports use server-side PDFKit generation to export financial audits with standard rupee formatting (`Rs.` and `₹` fallbacks).
 
-### 6. AI Operations Assistant
-* An on-demand LLM chatbot powered by Groq.
-* Connects directly to the PostgreSQL database using Prisma schema metadata.
-* Allows operators to query database stats (e.g. "What is our highest earning truck?" or "Show pending maintenance alerts") in plain natural language.
+### 6. AI Database Assistant
+* Connects to a Groq-powered LLM.
+* Utilizes database schema context mapping to translate plain text queries (e.g., "Find the vehicle with the highest maintenance cost") into accurate PostgreSQL database lookups, returning natural language answers.
 
 ---
 
-## Database Schema (Prisma Models)
+## Database Relational Schema
 
 ```prisma
 enum Role {
@@ -133,6 +144,35 @@ enum Role {
   DISPATCHER
   SAFETY_OFFICER
   FINANCIAL_ANALYST
+}
+
+enum VehicleType {
+  VAN
+  TRUCK
+  BUS
+  BIKE
+  CAR
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  ON_TRIP
+  IN_SHOP
+  RETIRED
+}
+
+enum DriverStatus {
+  AVAILABLE
+  ON_TRIP
+  OFF_DUTY
+  SUSPENDED
+}
+
+enum TripStatus {
+  DRAFT
+  DISPATCHED
+  COMPLETED
+  CANCELLED
 }
 
 model User {
@@ -201,24 +241,75 @@ model Trip {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 }
+
+model MaintenanceLog {
+  id          String            @id @default(uuid())
+  vehicleId   String
+  vehicle     Vehicle           @relation(fields: [vehicleId], references: [id])
+  type        String
+  cost        Float
+  status      String            @default("ACTIVE")
+  description String
+  serviceDate DateTime
+  closedAt    DateTime?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model FuelLog {
+  id          String   @id @default(uuid())
+  vehicleId   String
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
+  liters      Float
+  cost        Float
+  odometer    Float
+  fuelDate    DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Expense {
+  id          String      @id @default(uuid())
+  vehicleId   String
+  vehicle     Vehicle     @relation(fields: [vehicleId], references: [id])
+  type        String
+  amount      Float
+  description String
+  expenseDate DateTime    @default(now())
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
 ```
 
 ---
 
-## Role-Based Access Matrix
+## Role-Based Access Control
 
-The platform enforces strict client-side routing blocks and server-side middleware validation:
+The platform enforces strict role-based access control (RBAC) across all client routes and backend controllers:
 
 | View / Module | Fleet Manager | Dispatcher | Safety Officer | Financial Analyst |
 |---|:---:|:---:|:---:|:---:|
 | Operations Dashboard | Yes | Yes | Yes | Yes |
-| Fleet Fleet Management | Yes | Yes | No | No |
+| Fleet Management | Yes | Yes | No | No |
 | Driver Management | Yes | Yes | Yes | No |
 | Trip Dispatch Board | Yes | Yes | No | No |
 | Maintenance Logs | Yes | No | No | No |
 | Fuel & Expense Logs | Yes | No | No | Yes |
 | Financial Reports | Yes | No | No | Yes |
 | System Settings | Yes | No | No | No |
+
+---
+
+## Security Architecture
+
+### Token Storage Strategy
+* **Access Tokens**: Short-lived JSON Web Tokens (15 minutes) returned directly in the login response body. These are stored in React application state memory and injected into headers by Axios middleware.
+* **Refresh Tokens**: Long-lived secure session tokens (7 days) sent via HTTP response cookies with the `HttpOnly`, `Secure`, and `SameSite=Strict` flags set. This prevents scripts from accessing tokens, securing operations against XSS attacks.
+
+### Multi-Origin CORS Integration
+To handle local development port redirection dynamically, the API backend configures CORS rules allowing both standard Vite development ports:
+* `http://localhost:5173`
+* `http://localhost:5174`
 
 ---
 
