@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { PrismaClient } = require('@prisma/client');
 const { verifyToken } = require('../middleware/auth');
+const { checkMaintenanceNeeded } = require('../utils/maintenanceAlerts');
 const prisma = new PrismaClient();
 
 router.get('/kpis', verifyToken, async (req, res) => {
@@ -82,6 +83,16 @@ router.get('/kpis', verifyToken, async (req, res) => {
     });
   } catch (e) {
     console.error(e);
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+});
+
+// Predictive maintenance alerts
+router.get('/maintenance-alerts', verifyToken, async (req, res) => {
+  try {
+    const alerts = await checkMaintenanceNeeded();
+    res.json(alerts);
+  } catch (e) {
     res.status(500).json({ error: 'Something went wrong' });
   }
 });

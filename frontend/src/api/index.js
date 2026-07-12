@@ -52,6 +52,7 @@ export const expensesAPI = {
 
 export const dashboardAPI = {
   getKPIs: (params) => api.get('/dashboard/kpis', { params }),
+  getMaintenanceAlerts: () => api.get('/dashboard/maintenance-alerts'),
 };
 
 export const reportsAPI = {

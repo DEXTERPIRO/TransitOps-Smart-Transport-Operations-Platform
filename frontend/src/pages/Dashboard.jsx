@@ -1,150 +1,292 @@
-import { useQuery } from '@tanstack/react-query';
-import { Truck, Users, MapPin, Wrench, TrendingUp, Activity } from 'lucide-react';
-import { dashboardApi } from '../api';
-import { StatCard, StatusBadge, LoadingScreen } from '../components/ui';
-import { ExpenseTrendChart, VehicleStatusChart } from '../components/charts';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { useEffect, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
+import { dashboardAPI } from '../api';
+import {
+  Truck, Users, Route, Wrench, AlertTriangle,
+  TrendingUp, Activity, CheckCircle
+} from 'lucide-react';
+import {
+  PieChart, Pie, Cell, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid
+} from 'recharts';
+import KPICard from '../components/ui/KPICard';
+import StatusBadge from '../components/ui/StatusBadge';
+import { useAuthStore } from '../store/authStore';
+import toast from 'react-hot-toast';
+
+const STATUS_COLORS = {
+  AVAILABLE: '#22c55e', ON_TRIP: '#3b82f6',
+  IN_SHOP: '#f59e0b', RETIRED: '#64748b'
+};
 
 export default function Dashboard() {
-  const { data: stats, isLoading } = useQuery({
-    queryKey: ['dashboard-stats'],
-    queryFn: () => dashboardApi.getStats().then((r) => r.data),
-    refetchInterval: 30_000,
+  const [data, setData] = useState(null);
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState({
+    type: '', status: '', region: ''
   });
+  const { theme } = useAuthStore();
+  const isDark = theme === 'dark';
+  const navigate = useNavigate();
 
-  const { data: recentTrips = [] } = useQuery({
-    queryKey: ['recent-trips'],
-    queryFn: () => dashboardApi.getRecentTrips().then((r) => r.data),
-    refetchInterval: 30_000,
-  });
+  const fetchData = useCallback(async () => {
+    try {
+      const [res, alertsRes] = await Promise.all([
+        dashboardAPI.getKPIs(filters),
+        dashboardAPI.getMaintenanceAlerts()
+      ]);
+      setData(res);
+      setAlerts(alertsRes);
+    } catch (e) {
+      toast.error('Failed to load dashboard data');
+    } finally { setLoading(false); }
+  }, [filters]);
 
-  const { data: expenseTrend = [] } = useQuery({
-    queryKey: ['expense-trend'],
-    queryFn: () => dashboardApi.getExpenseTrend().then((r) => r.data),
-  });
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  const { data: activeTrips = [] } = useQuery({
-    queryKey: ['active-trips-map'],
-    queryFn: () => dashboardApi.getActiveTrips().then((r) => r.data),
-    refetchInterval: 15_000,
-  });
+  // Real-time Socket.io updates
+  useEffect(() => {
+    const socket = io('http://localhost:5000');
+    socket.emit('join-dashboard');
 
-  if (isLoading) return <LoadingScreen />;
+    socket.on('vehicle-added', () => {
+      fetchData();
+      toast('New vehicle added to fleet', { icon: '🚛' });
+    });
+    socket.on('trip-dispatched', (trip) => {
+      fetchData();
+      toast(`Trip ${trip.tripCode} dispatched!`, { icon: '🚀' });
+    });
+    socket.on('trip-completed', (trip) => {
+      fetchData();
+      toast.success(`Trip ${trip.tripCode} completed!`);
+    });
+    socket.on('trip-cancelled', () => fetchData());
+    socket.on('maintenance-created', ({ vehicleName }) => {
+      fetchData();
+      toast(`${vehicleName} sent to maintenance`, { icon: '🔧' });
+    });
+    socket.on('maintenance-closed', () => fetchData());
 
-  const vehicleChartData = stats
-    ? [
-        { name: 'Active',      value: stats.vehicles.active },
-        { name: 'Maintenance', value: stats.vehicles.maintenance },
-        { name: 'Inactive',    value: stats.vehicles.total - stats.vehicles.active - stats.vehicles.maintenance },
-      ].filter((d) => d.value > 0)
-    : [];
+    return () => socket.disconnect();
+  }, [fetchData]);
 
-  const formatCurrency = (v) =>
-    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(v);
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className={`h-28 rounded-2xl
+              ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const { kpis, recentTrips, vehicleStatusBreakdown } = data || {};
+
+  const pieData = vehicleStatusBreakdown?.map(v => ({
+    name: v.status, value: v.count,
+    color: STATUS_COLORS[v.status] || '#64748b'
+  })) || [];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Truck}    label="Total Vehicles"  value={stats?.vehicles.total}     sub={`${stats?.vehicles.active} active`}  color="brand" />
-        <StatCard icon={Users}    label="Drivers"         value={stats?.drivers.total}      sub={`${stats?.drivers.active} active`}   color="blue" />
-        <StatCard icon={MapPin}   label="Today's Trips"   value={stats?.trips.today}        sub={`${stats?.trips.active} running`}    color="green" />
-        <StatCard icon={Wrench}   label="Maint. Pending"  value={stats?.maintenance.pending} sub="needs attention"                    color="yellow" />
-      </div>
-
-      {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 card">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-white">Expense Trend</h3>
-              <p className="text-xs text-dark-400">Last 6 months</p>
-            </div>
-            <TrendingUp size={18} className="text-brand-400" />
-          </div>
-          <ExpenseTrendChart data={expenseTrend} />
+    <div className="space-y-6">
+      {/* Page header */}
+      <div className="flex flex-col sm:flex-row sm:items-center
+                      justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Operations Dashboard</h1>
+          <p className={`text-sm mt-0.5
+            ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            Real-time fleet overview and KPIs
+          </p>
         </div>
 
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-semibold text-white">Fleet Status</h3>
-              <p className="text-xs text-dark-400">By condition</p>
-            </div>
-            <Activity size={18} className="text-brand-400" />
-          </div>
-          <VehicleStatusChart data={vehicleChartData} />
-          <div className="mt-3 space-y-1.5">
-            <div className="flex justify-between text-sm">
-              <span className="text-dark-400">Total expenses</span>
-              <span className="font-medium text-white">{formatCurrency(stats?.financials.totalExpenses || 0)}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-dark-400">Fuel cost</span>
-              <span className="font-medium text-white">{formatCurrency(stats?.financials.totalFuelCost || 0)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Map + Recent trips */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Live map */}
-        <div className="card p-0 overflow-hidden">
-          <div className="flex items-center gap-2 px-5 py-4 border-b border-dark-700">
-            <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
-            <h3 className="font-semibold text-white">Live Trip Map</h3>
-            <span className="ml-auto text-xs text-dark-400">{activeTrips.length} active</span>
-          </div>
-          <div style={{ height: 300 }}>
-            <MapContainer
-              center={[19.076, 72.877]}
-              zoom={11}
-              style={{ height: '100%', width: '100%' }}
+        {/* Filters */}
+        <div className="flex gap-2 flex-wrap">
+          {[
+            { key: 'type', options: ['VAN','TRUCK','BUS','BIKE','CAR'], label: 'Type: All' },
+            { key: 'region', options: ['North','South','East','West'], label: 'Region: All' },
+          ].map(f => (
+            <select
+              key={f.key}
+              value={filters[f.key]}
+              onChange={e => setFilters({ ...filters, [f.key]: e.target.value })}
+              className={`text-xs px-3 py-2 rounded-xl border font-mono
+                          focus:outline-none focus:ring-2 focus:ring-orange-500/30
+                ${isDark
+                  ? 'bg-slate-800 border-slate-700 text-slate-300'
+                  : 'bg-white border-slate-200 text-slate-700'}`}
             >
-              <TileLayer
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                attribution="&copy; OpenStreetMap"
-              />
-              {activeTrips.map((trip) => (
-                trip.currentLat && (
-                  <Marker key={trip.id} position={[trip.currentLat, trip.currentLng]}>
-                    <Popup>
-                      <div className="text-xs">
-                        <b>{trip.vehicle?.regNumber}</b><br />
-                        Driver: {trip.driver?.name}<br />
-                        Route: {trip.route?.name || '—'}
-                      </div>
-                    </Popup>
-                  </Marker>
-                )
+              <option value="">{f.label}</option>
+              {f.options.map(o => (
+                <option key={o} value={o}>{o}</option>
               ))}
-            </MapContainer>
-          </div>
+            </select>
+          ))}
         </div>
+      </div>
 
-        {/* Recent trips */}
-        <div className="card">
-          <h3 className="font-semibold text-white mb-4">Recent Trips</h3>
-          <div className="space-y-3">
-            {recentTrips.slice(0, 6).map((trip) => (
-              <div key={trip.id} className="flex items-center gap-3 p-3 rounded-lg bg-dark-900/50 hover:bg-dark-700/50 transition-colors">
-                <div className="w-10 h-10 rounded-lg bg-brand-500/15 flex items-center justify-center flex-shrink-0">
-                  <MapPin size={16} className="text-brand-400" />
+      {/* Expiring license alert */}
+      {kpis?.expiringLicenses > 0 && (
+        <div className="flex items-center gap-3 bg-amber-500/10 border
+                        border-amber-500/30 text-amber-400 rounded-xl
+                        px-4 py-3 text-sm">
+          <AlertTriangle size={16} />
+          <span>
+            <strong>{kpis.expiringLicenses} driver(s)</strong> have
+            licenses expiring within 30 days.
+            Check the Drivers page.
+          </span>
+        </div>
+      )}
+
+      {/* KPI Grid */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard label="Active Vehicles" value={kpis?.activeVehicles || 0}
+          icon={Truck} color="orange" sub="Excluding retired" />
+        <KPICard label="Available Now" value={kpis?.availableVehicles || 0}
+          icon={CheckCircle} color="green" />
+        <KPICard label="Active Trips" value={kpis?.activeTrips || 0}
+          icon={Route} color="blue" sub="Currently dispatched" />
+        <KPICard label="Pending Trips" value={kpis?.pendingTrips || 0}
+          icon={Activity} color="amber" sub="Draft status" />
+        <KPICard label="In Maintenance" value={kpis?.inShopVehicles || 0}
+          icon={Wrench} color="red" />
+        <KPICard label="Drivers On Duty" value={kpis?.driversOnDuty || 0}
+          icon={Users} color="purple" />
+        <KPICard label="Fleet Utilization"
+          value={`${kpis?.fleetUtilization || 0}%`}
+          icon={TrendingUp} color="orange"
+          sub={`${kpis?.onTripVehicles || 0} of ${kpis?.totalVehicles || 0} vehicles`} />
+        <KPICard label="Retired" value={kpis?.retiredVehicles || 0}
+          icon={Truck} color="purple" />
+      </div>
+
+      {/* Predictive maintenance alerts */}
+      {alerts.length > 0 && (
+        <div className="space-y-3">
+          <h3 className="font-semibold text-sm flex items-center gap-2">
+            <AlertTriangle size={16} className="text-amber-500" />
+            Predictive Maintenance Alerts
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {alerts.map(alert => (
+              <div key={alert.vehicleId}
+                   className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border text-sm
+                     ${isDark
+                       ? 'border-amber-500/20 bg-amber-500/5 text-slate-300'
+                       : 'border-amber-200 bg-amber-50/50 text-slate-700'}`}>
+                <div className="flex items-start gap-3">
+                  <Wrench size={18} className="text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      {alert.vehicleName} ({alert.registrationNo})
+                    </h4>
+                    <p className={`text-xs mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      Traveled <strong>{alert.kmSinceService.toLocaleString()} km</strong> since last service.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{trip.tripNumber}</p>
-                  <p className="text-xs text-dark-400 truncate">
-                    {trip.vehicle?.regNumber} · {trip.driver?.name}
-                  </p>
-                </div>
-                <StatusBadge status={trip.status} />
+                <button
+                  onClick={() => navigate('/maintenance', { state: { vehicleId: alert.vehicleId } })}
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-semibold px-3 py-1.5 rounded-lg text-xs transition whitespace-nowrap self-end sm:self-auto"
+                >
+                  Schedule Maintenance
+                </button>
               </div>
             ))}
-            {!recentTrips.length && (
-              <p className="text-center text-dark-400 text-sm py-8">No trips recorded yet</p>
-            )}
           </div>
+        </div>
+      )}
+
+      {/* Charts row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        {/* Fleet Status Pie Chart */}
+        <div className={`rounded-2xl border p-5
+          ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <h3 className="font-semibold mb-4">Fleet Status Distribution</h3>
+          {pieData.length > 0 ? (
+            <>
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie data={pieData} dataKey="value"
+                       nameKey="name" cx="50%" cy="50%"
+                       outerRadius={80} innerRadius={40}>
+                    {pieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      background: isDark ? '#1e293b' : '#fff',
+                      border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+                      borderRadius: '8px', fontSize: '12px'
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-wrap gap-3 mt-2 justify-center">
+                {pieData.map(d => (
+                  <div key={d.name}
+                    className="flex items-center gap-1.5 text-xs">
+                    <div className="w-2.5 h-2.5 rounded-full"
+                         style={{ background: d.color }} />
+                    <span className={isDark ? 'text-slate-400' : 'text-slate-600'}>
+                      {d.name} ({d.value})
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="h-48 flex items-center justify-center
+                            text-slate-500 text-sm">
+              No vehicle data
+            </div>
+          )}
+        </div>
+
+        {/* Recent Trips */}
+        <div className={`rounded-2xl border p-5
+          ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <h3 className="font-semibold mb-4">Recent Trips</h3>
+          {recentTrips?.length > 0 ? (
+            <div className="space-y-3">
+              {recentTrips.map(trip => (
+                <div key={trip.id}
+                  className={`flex items-center justify-between p-3
+                               rounded-xl text-sm
+                    ${isDark ? 'bg-slate-800' : 'bg-slate-50'}`}>
+                  <div className="min-w-0">
+                    <div className="font-mono font-semibold text-xs
+                                    text-orange-400">
+                      {trip.tripCode}
+                    </div>
+                    <div className="font-medium truncate mt-0.5">
+                      {trip.source} → {trip.destination}
+                    </div>
+                    <div className={`text-xs mt-0.5
+                      ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {trip.vehicle.registrationNo} · {trip.driver.name}
+                    </div>
+                  </div>
+                  <StatusBadge status={trip.status} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-48 flex flex-col items-center justify-center
+                            text-slate-500 gap-2">
+              <Route size={32} className="opacity-30" />
+              <span className="text-sm">No trips yet</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
