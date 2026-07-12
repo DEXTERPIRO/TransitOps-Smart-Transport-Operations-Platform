@@ -99,6 +99,45 @@ async function main() {
     startedAt: new Date(),
   }});
 
+  await prisma.trip.createMany({ data: [
+    {
+      tripCode: 'TR003', source: 'Mumbai', destination: 'Nashik',
+      vehicleId: v1.id, driverId: d1.id, dispatchedById: dispatch.id,
+      cargoWeight: 300, plannedDistance: 167, revenue: 9500,
+      status: 'COMPLETED', actualDistance: 170, fuelConsumed: 20,
+      startOdometer: 12552, endOdometer: 12722,
+      startedAt: new Date('2024-08-05T09:00:00'),
+      completedAt: new Date('2024-08-05T13:00:00'),
+    },
+    {
+      tripCode: 'TR004', source: 'Delhi', destination: 'Jaipur',
+      vehicleId: v4.id, driverId: d4.id, dispatchedById: dispatch.id,
+      cargoWeight: 2000, plannedDistance: 280, revenue: 25000,
+      status: 'COMPLETED', actualDistance: 285, fuelConsumed: 45,
+      startOdometer: 98000, endOdometer: 98285,
+      startedAt: new Date('2024-09-10T07:00:00'),
+      completedAt: new Date('2024-09-10T14:00:00'),
+    },
+    {
+      tripCode: 'TR005', source: 'Bangalore', destination: 'Chennai',
+      vehicleId: v1.id, driverId: d1.id, dispatchedById: dispatch.id,
+      cargoWeight: 400, plannedDistance: 346, revenue: 18000,
+      status: 'COMPLETED', actualDistance: 350, fuelConsumed: 42,
+      startOdometer: 12722, endOdometer: 13072,
+      startedAt: new Date('2024-10-15T06:00:00'),
+      completedAt: new Date('2024-10-15T15:00:00'),
+    },
+    {
+      tripCode: 'TR006', source: 'Pune', destination: 'Nagpur',
+      vehicleId: v2.id, driverId: d4.id, dispatchedById: dispatch.id,
+      cargoWeight: 1500, plannedDistance: 480, revenue: 32000,
+      status: 'COMPLETED', actualDistance: 488, fuelConsumed: 68,
+      startOdometer: 45200, endOdometer: 45688,
+      startedAt: new Date('2024-11-20T05:00:00'),
+      completedAt: new Date('2024-11-20T18:00:00'),
+    },
+  ]});
+
   // Update statuses for dispatched trip
   await prisma.vehicle.update({ where: { id: v2.id }, data: { status: 'ON_TRIP' }});
   await prisma.driver.update({ where: { id: d2.id }, data: { status: 'ON_TRIP' }});

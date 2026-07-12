@@ -337,6 +337,13 @@ export default function Reports() {
                   dataKey="month"
                   tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'Inter, sans-serif', fontWeight: 500 }}
                   axisLine={false} tickLine={false}
+                  tickFormatter={(value) => {
+                    try {
+                      return new Date(value).toLocaleDateString('en-IN', {
+                        month: 'short', year: '2-digit'
+                      });
+                    } catch { return value; }
+                  }}
                 />
                 <YAxis
                   tick={{ fill: 'var(--text-muted)', fontSize: 10, fontFamily: 'Inter, sans-serif' }}

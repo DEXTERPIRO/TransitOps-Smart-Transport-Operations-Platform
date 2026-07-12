@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink, useNavigate, useNavigation } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuthStore } from '../../store/authStore';
 import { authAPI } from '../../api';
@@ -47,6 +47,7 @@ const ROLE_LABELS = {
 export default function AppLayout() {
   const { user, logout, theme, toggleTheme } = useAuthStore();
   const navigate = useNavigate();
+  const navigation = useNavigation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAI, setShowAI] = useState(false);
 
@@ -133,7 +134,7 @@ export default function AppLayout() {
                 text-xs uppercase font-mono font-bold tracking-wider transition-all group
                 ${isActive
                   ? 'bg-[var(--muted)] text-[var(--accent)] shadow-[var(--shadow-recessed)] translate-y-[1px]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--foreground)] hover:shadow-[var(--shadow-card)] hover:-translate-y-[1px]'
+                  : 'text-slate-700 dark:text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-[var(--text-primary)] hover:bg-slate-100 dark:hover:bg-[var(--foreground)] hover:shadow-[var(--shadow-card)] hover:-translate-y-[1px]'
                 }
               `}
             >
@@ -226,6 +227,10 @@ export default function AppLayout() {
             </div>
           </div>
         </header>
+
+        {navigation.state === 'loading' && (
+          <div className="h-0.5 bg-green-500 animate-pulse w-full" />
+        )}
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-[var(--background)]">

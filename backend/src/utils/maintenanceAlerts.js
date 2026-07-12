@@ -1,6 +1,6 @@
 const prisma = require('./prisma');
 
-const ALERT_THRESHOLD_KM = 5000;
+const ALERT_THRESHOLD_KM = 10000;
 
 const checkMaintenanceNeeded = async () => {
   const vehicles = await prisma.vehicle.findMany({
@@ -25,8 +25,8 @@ const checkMaintenanceNeeded = async () => {
     const lastServiceOdo = lastService?.endOdometer || 0;
     const kmSinceService = v.odometer - lastServiceOdo;
 
-    if (kmSinceService >= ALERT_THRESHOLD_KM) {
-      const severity = kmSinceService >= 10000 ? 'HIGH' : 'MEDIUM';
+    if (kmSinceService > ALERT_THRESHOLD_KM) {
+      const severity = kmSinceService >= 15000 ? 'HIGH' : 'MEDIUM';
       alerts.push({
         vehicleId:      v.id,
         vehicleName:    v.name,
