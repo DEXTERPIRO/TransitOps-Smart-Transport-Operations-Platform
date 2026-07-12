@@ -1,7 +1,6 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const { verifyToken, requireRoles } = require('../middleware/auth');
-const prisma = new PrismaClient();
 
 router.get('/', verifyToken, async (req, res) => {
   try {
@@ -74,10 +73,6 @@ router.post('/', verifyToken,
     });
     if (!vehicle)
       return res.status(404).json({ error: 'Vehicle not found' });
-    if (vehicle.status !== 'AVAILABLE')
-      return res.status(400).json({
-        error: `Vehicle ${vehicle.registrationNo} is ${vehicle.status} and cannot be dispatched`
-      });
     if (vehicle.status === 'RETIRED')
       return res.status(400).json({
         error: 'Retired vehicles cannot be assigned to trips'
@@ -85,6 +80,10 @@ router.post('/', verifyToken,
     if (vehicle.status === 'IN_SHOP')
       return res.status(400).json({
         error: 'Vehicle is currently in maintenance and unavailable'
+      });
+    if (vehicle.status !== 'AVAILABLE')
+      return res.status(400).json({
+        error: `Vehicle ${vehicle.registrationNo} is ${vehicle.status} and cannot be dispatched`
       });
 
     // BUSINESS RULE: Check cargo weight vs max capacity

@@ -1,8 +1,7 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const { verifyToken } = require('../middleware/auth');
 const { checkMaintenanceNeeded } = require('../utils/maintenanceAlerts');
-const prisma = new PrismaClient();
 
 router.get('/kpis', verifyToken, async (req, res) => {
   try {

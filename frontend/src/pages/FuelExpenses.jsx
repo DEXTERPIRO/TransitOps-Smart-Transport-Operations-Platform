@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fuelAPI, expensesAPI, vehiclesAPI, maintenanceAPI } from '../api';
 import { useAuthStore } from '../store/authStore';
-import Modal from '../components/ui/Modal';
+import { PageHeader, SectionHeader, EmptyState, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
 import { Fuel, Receipt, BarChart3, Plus, AlertCircle } from 'lucide-react';
 
@@ -19,10 +19,10 @@ const EMPTY_EXPENSE = {
 function Field({ label, error, children }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-400 mb-1">{label}</label>
+      <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">{label}</label>
       {children}
       {error && (
-        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+        <p className="text-danger text-xs font-mono mt-1 flex items-center gap-1">
           <AlertCircle size={10} /> {error}
         </p>
       )}
@@ -30,25 +30,6 @@ function Field({ label, error, children }) {
   );
 }
 
-function SectionHeader({ icon: Icon, title, color, count, onAdd, addLabel }) {
-  return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2">
-        <Icon size={18} className={color} />
-        <h2 className="font-semibold text-base">{title}</h2>
-        <span className="text-xs font-mono text-slate-500">({count})</span>
-      </div>
-      <button
-        onClick={onAdd}
-        className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600
-                   text-white px-3 py-2 rounded-xl text-xs font-medium
-                   transition shadow-md shadow-orange-500/20"
-      >
-        <Plus size={13} /> {addLabel}
-      </button>
-    </div>
-  );
-}
 
 export default function FuelExpenses() {
   const { theme } = useAuthStore();
@@ -79,7 +60,7 @@ export default function FuelExpenses() {
         vehiclesAPI.getAll(),
         fuelAPI.getAll(),
         expensesAPI.getAll(),
-        maintenanceAPI.getAll({ status: 'CLOSED' }),
+        maintenanceAPI.getAll(),
       ]);
       setVehicles(v);
       setFuelLogs(f);
@@ -175,53 +156,47 @@ export default function FuelExpenses() {
   const grandTotal = costSummary.reduce((s, v) => s + v.total, 0);
 
   const inputCls = (err) =>
-    `w-full bg-slate-800 border rounded-xl px-3 py-2.5 text-white
-     placeholder-slate-500 text-sm focus:outline-none focus:ring-2 transition
-     ${err
-       ? 'border-red-500 focus:ring-red-500/30'
-       : 'border-slate-700 focus:ring-orange-500/30 focus:border-orange-500'}`;
+    `input ${err ? 'ring-2 ring-danger' : ''}`;
 
   const selectCls = (err) =>
-    `w-full bg-slate-800 border rounded-xl px-3 py-2.5 text-white text-sm
-     focus:outline-none focus:ring-2 transition
-     ${err
-       ? 'border-red-500 focus:ring-red-500/30'
-       : 'border-slate-700 focus:ring-orange-500/30 focus:border-orange-500'}`;
+    `select ${err ? 'ring-2 ring-danger' : ''}`;
 
-  const tableCls = `rounded-2xl border overflow-hidden
-    ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`;
+  const tableCls = 'rounded-2xl bg-panel shadow-[var(--shadow-card)] p-1 border border-[var(--border-color)]';
 
-  const thCls = `px-4 py-3 text-left text-xs uppercase tracking-wider font-semibold
-    ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-50 text-slate-500'}`;
+  const thCls = 'table-header font-mono text-xs font-bold uppercase tracking-wider text-text-sub border-b border-b-shadow/50';
 
-  const tdCls = `px-4 py-3 text-sm ${isDark ? 'text-slate-300' : 'text-slate-700'}`;
+  const tdCls = 'table-cell text-xs text-text-main border-b border-b-shadow/20';
 
-  const trHover = `transition-colors ${isDark ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}`;
+  const trHover = 'table-row';
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Fuel & Expenses</h1>
-        <p className={`text-sm mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          Track fuel consumption and operational costs
-        </p>
-      </div>
+      <PageHeader
+        title="Fuel & Expenses"
+        subtitle="Track fuel consumption and operational costs"
+        icon={Fuel}
+      />
 
       {/* ── SECTION 1: Fuel Logs ──────────────────────────────────────────── */}
       <div className="space-y-3">
         <SectionHeader
-          icon={Fuel} title="Fuel Logs" color="text-amber-400"
-          count={fuelLogs.length}
-          onAdd={() => { setFuelForm(EMPTY_FUEL); setFuelErrors({}); setFuelModal(true); }}
-          addLabel="Log Fuel"
+          icon={Fuel}
+          title="Fuel Logs"
+          badge={fuelLogs.length}
+          action={
+            <button
+              onClick={() => { setFuelForm(EMPTY_FUEL); setFuelErrors({}); setFuelModal(true); }}
+              className="btn-primary py-1.5 px-3 text-xs"
+            >
+              <Plus size={13} /> Log Fuel
+            </button>
+          }
         />
 
         {loading ? (
-          <div className="animate-pulse h-32 rounded-2xl bg-slate-800" />
+          <div className="animate-pulse h-32 rounded-2xl bg-recessed shadow-[var(--shadow-recessed)]" />
         ) : fuelLogs.length === 0 ? (
-          <div className={`text-center py-10 rounded-2xl border text-slate-500 text-sm
-            ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className="text-center py-10 rounded-2xl bg-panel shadow-[var(--shadow-card)] grid-pattern border border-[var(--border-color)] text-text-sub text-sm font-mono uppercase tracking-wider">
             No fuel logs yet
           </div>
         ) : (
@@ -237,17 +212,17 @@ export default function FuelExpenses() {
                 {fuelLogs.map(f => (
                   <tr key={f.id} className={trHover}>
                     <td className={tdCls}>
-                      <div className="font-mono text-orange-400 text-xs font-bold">
+                      <div className="font-mono text-accent text-xs font-bold">
                         {f.vehicle?.registrationNo}
                       </div>
-                      <div className="text-xs text-slate-500">{f.vehicle?.name}</div>
+                      <div className="text-xs text-text-sub">{f.vehicle?.name}</div>
                     </td>
                     <td className={`${tdCls} font-mono text-xs`}>
                       {new Date(f.date).toLocaleDateString('en-IN')}
                     </td>
                     <td className={`${tdCls} font-mono text-xs`}>{f.liters} L</td>
                     <td className={`${tdCls} font-mono text-xs`}>₹{f.costPerL}</td>
-                    <td className={`${tdCls} font-mono text-xs text-green-400 font-bold`}>
+                    <td className={`${tdCls} font-mono text-xs text-success font-bold`}>
                       ₹{f.totalCost?.toLocaleString()}
                     </td>
                     <td className={`${tdCls} font-mono text-xs`}>
@@ -265,17 +240,23 @@ export default function FuelExpenses() {
       {/* ── SECTION 2: Other Expenses ────────────────────────────────────── */}
       <div className="space-y-3">
         <SectionHeader
-          icon={Receipt} title="Other Expenses" color="text-purple-400"
-          count={expenses.length}
-          onAdd={() => { setExpenseForm(EMPTY_EXPENSE); setExpErrors({}); setExpenseModal(true); }}
-          addLabel="Add Expense"
+          icon={Receipt}
+          title="Other Expenses"
+          badge={expenses.length}
+          action={
+            <button
+              onClick={() => { setExpenseForm(EMPTY_EXPENSE); setExpErrors({}); setExpenseModal(true); }}
+              className="btn-primary py-1.5 px-3 text-xs"
+            >
+              <Plus size={13} /> Add Expense
+            </button>
+          }
         />
 
         {loading ? (
-          <div className="animate-pulse h-32 rounded-2xl bg-slate-800" />
+          <div className="animate-pulse h-32 rounded-2xl bg-recessed shadow-[var(--shadow-recessed)]" />
         ) : expenses.length === 0 ? (
-          <div className={`text-center py-10 rounded-2xl border text-slate-500 text-sm
-            ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className="text-center py-10 rounded-2xl bg-panel shadow-[var(--shadow-card)] grid-pattern border border-[var(--border-color)] text-text-sub text-sm font-mono uppercase tracking-wider">
             No expenses recorded
           </div>
         ) : (
@@ -290,20 +271,19 @@ export default function FuelExpenses() {
               <tbody className={`divide-y ${isDark ? 'divide-slate-800' : 'divide-slate-100'}`}>
                 {expenses.map(exp => (
                   <tr key={exp.id} className={trHover}>
-                    <td className={`${tdCls} font-mono text-xs text-orange-400`}>
+                    <td className={`${tdCls} font-mono text-xs text-accent font-bold`}>
                       {exp.vehicle?.registrationNo || '—'}
                     </td>
                     <td className={`${tdCls} font-mono text-xs`}>
                       {new Date(exp.date).toLocaleDateString('en-IN')}
                     </td>
                     <td className={tdCls}>
-                      <span className={`text-xs font-mono px-2 py-0.5 rounded-lg
-                        ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+                      <span className="text-xs font-mono px-2 py-0.5 rounded-lg bg-recessed text-text-sub border border-b-shadow/20">
                         {exp.type}
                       </span>
                     </td>
                     <td className={`${tdCls} text-xs`}>{exp.description || '—'}</td>
-                    <td className={`${tdCls} font-mono text-xs font-bold text-red-400`}>
+                    <td className={`${tdCls} font-mono text-xs font-bold text-danger`}>
                       ₹{exp.amount?.toLocaleString()}
                     </td>
                   </tr>
@@ -316,14 +296,10 @@ export default function FuelExpenses() {
 
       {/* ── SECTION 3: Cost Summary ──────────────────────────────────────── */}
       <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <BarChart3 size={18} className="text-blue-400" />
-          <h2 className="font-semibold text-base">Operational Cost Summary</h2>
-        </div>
+        <SectionHeader icon={BarChart3} title="Operational Cost Summary" />
 
         {costSummary.length === 0 ? (
-          <div className={`text-center py-10 rounded-2xl border text-slate-500 text-sm
-            ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className="text-center py-10 rounded-2xl bg-panel shadow-[var(--shadow-card)] grid-pattern border border-[var(--border-color)] text-text-sub text-sm font-mono uppercase tracking-wider">
             No cost data available
           </div>
         ) : (
@@ -335,35 +311,35 @@ export default function FuelExpenses() {
                     .map(h => <th key={h} className={thCls}>{h}</th>)}
                 </tr>
               </thead>
-              <tbody className={`divide-y ${isDark ? 'divide-slate-800' : 'divide-slate-100'}`}>
+              <tbody className="divide-y divide-b-shadow/20">
                 {costSummary.map(v => {
                   const isMax = v.total === maxCost && maxCost > 0;
                   return (
                     <tr key={v.id}
-                      className={`${trHover} ${isMax ? 'bg-red-500/5' : ''}`}>
+                      className={`${trHover} ${isMax ? 'bg-danger/5' : ''}`}>
                       <td className={tdCls}>
                         <div className={`font-mono text-xs font-bold
-                          ${isMax ? 'text-red-400' : 'text-orange-400'}`}>
+                          ${isMax ? 'text-danger' : 'text-accent'}`}>
                           {v.regNo}
                         </div>
-                        <div className="text-xs text-slate-500">{v.name}</div>
+                        <div className="text-xs text-text-sub">{v.name}</div>
                         {isMax && (
-                          <span className="text-xs text-red-400 font-mono">
-                            ▲ Highest
+                          <span className="text-xs text-danger font-mono font-bold uppercase tracking-wider">
+                            ▲ Highest Cost
                           </span>
                         )}
                       </td>
-                      <td className={`${tdCls} font-mono text-xs text-amber-400`}>
+                      <td className={`${tdCls} font-mono text-xs text-warning font-bold`}>
                         ₹{v.fuelCost.toLocaleString()}
                       </td>
-                      <td className={`${tdCls} font-mono text-xs text-purple-400`}>
+                      <td className={`${tdCls} font-mono text-xs text-purple-400 font-bold`}>
                         ₹{v.maintCost.toLocaleString()}
                       </td>
-                      <td className={`${tdCls} font-mono text-xs text-blue-400`}>
+                      <td className={`${tdCls} font-mono text-xs text-blue-500 dark:text-blue-400 font-bold`}>
                         ₹{v.otherCost.toLocaleString()}
                       </td>
                       <td className={`${tdCls} font-mono text-xs font-bold
-                        ${isMax ? 'text-red-400' : 'text-green-400'}`}>
+                        ${isMax ? 'text-danger' : 'text-success'}`}>
                         ₹{v.total.toLocaleString()}
                       </td>
                     </tr>
@@ -371,18 +347,18 @@ export default function FuelExpenses() {
                 })}
               </tbody>
               <tfoot>
-                <tr className={`font-bold border-t-2 ${isDark ? 'border-slate-600' : 'border-slate-200'}`}>
-                  <td className={`${tdCls} font-bold`}>TOTAL</td>
-                  <td className={`${tdCls} font-mono text-xs text-amber-400`}>
+                <tr className="font-bold border-t-2 border-b-shadow bg-recessed/30">
+                  <td className={`${tdCls} font-bold text-text-main font-mono uppercase tracking-wider`}>TOTAL</td>
+                  <td className={`${tdCls} font-mono text-xs text-warning font-bold`}>
                     ₹{costSummary.reduce((s, v) => s + v.fuelCost, 0).toLocaleString()}
                   </td>
-                  <td className={`${tdCls} font-mono text-xs text-purple-400`}>
+                  <td className={`${tdCls} font-mono text-xs text-purple-400 font-bold`}>
                     ₹{costSummary.reduce((s, v) => s + v.maintCost, 0).toLocaleString()}
                   </td>
-                  <td className={`${tdCls} font-mono text-xs text-blue-400`}>
+                  <td className={`${tdCls} font-mono text-xs text-blue-500 dark:text-blue-400 font-bold`}>
                     ₹{costSummary.reduce((s, v) => s + v.otherCost, 0).toLocaleString()}
                   </td>
-                  <td className={`${tdCls} font-mono text-sm font-bold text-white`}>
+                  <td className={`${tdCls} font-mono text-sm font-bold text-text-main`}>
                     ₹{grandTotal.toLocaleString()}
                   </td>
                 </tr>
@@ -435,11 +411,9 @@ export default function FuelExpenses() {
 
           {/* Live total */}
           {fuelForm.liters && fuelForm.costPerL && (
-            <div className={`flex items-center justify-between px-4 py-2.5
-                             rounded-xl border text-sm font-mono
-              ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-              <span className="text-slate-400">Total Cost</span>
-              <span className="text-green-400 font-bold">
+            <div className="flex items-center justify-between px-4 py-2.5 rounded-xl border border-b-shadow/30 bg-chassis shadow-[var(--shadow-recessed)] text-sm font-mono">
+              <span className="text-text-sub uppercase tracking-wider text-[10px] font-bold">Total Cost</span>
+              <span className="text-success font-bold">
                 ₹{fuelTotal.toFixed(2)}
               </span>
             </div>
@@ -471,18 +445,12 @@ export default function FuelExpenses() {
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setFuelModal(false)}
-              className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition
-                ${isDark
-                  ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+              className="btn-secondary flex-1">
               Cancel
             </button>
             <button type="submit" disabled={saving}
-              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white
-                         py-2.5 rounded-xl text-sm font-medium transition
-                         flex items-center justify-center gap-2 disabled:opacity-50">
-              {saving && <div className="w-3.5 h-3.5 border-2 border-white/30
-                                         border-t-white rounded-full animate-spin" />}
+              className="btn-primary bg-accent flex-1">
+              {saving && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               Save Fuel Log
             </button>
           </div>
@@ -544,18 +512,12 @@ export default function FuelExpenses() {
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setExpenseModal(false)}
-              className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition
-                ${isDark
-                  ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+              className="btn-secondary flex-1">
               Cancel
             </button>
             <button type="submit" disabled={saving}
-              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white
-                         py-2.5 rounded-xl text-sm font-medium transition
-                         flex items-center justify-center gap-2 disabled:opacity-50">
-              {saving && <div className="w-3.5 h-3.5 border-2 border-white/30
-                                         border-t-white rounded-full animate-spin" />}
+              className="btn-primary bg-accent flex-1">
+              {saving && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               Add Expense
             </button>
           </div>

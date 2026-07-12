@@ -1,7 +1,6 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const { verifyToken, requireRoles } = require('../middleware/auth');
-const prisma = new PrismaClient();
 
 router.get('/', verifyToken, async (req, res) => {
   try {
@@ -32,6 +31,7 @@ router.get('/', verifyToken, async (req, res) => {
     const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
     const result = drivers.map(d => ({
       ...d,
+      licenseNo: d.licenseNumber,
       licenseExpired: new Date(d.licenseExpiry) < now,
       licenseExpiringSoon: new Date(d.licenseExpiry) < thirtyDays
         && new Date(d.licenseExpiry) >= now
@@ -56,7 +56,7 @@ router.get('/:id', verifyToken, async (req, res) => {
       }
     });
     if (!driver) return res.status(404).json({ error: 'Driver not found' });
-    res.json(driver);
+    res.json({ ...driver, licenseNo: driver.licenseNumber });
   } catch (e) {
     res.status(500).json({ error: 'Something went wrong' });
   }
@@ -66,19 +66,21 @@ router.post('/', verifyToken,
   requireRoles('FLEET_MANAGER', 'SAFETY_OFFICER'), async (req, res) => {
   try {
     const {
-      name, licenseNumber, licenseCategory,
+      name, licenseNumber, licenseNo, licenseCategory,
       licenseExpiry, contactNumber, region, safetyScore
     } = req.body;
 
-    if (!name || !licenseNumber || !licenseCategory || !licenseExpiry || !contactNumber)
+    const resolvedLicenseNumber = licenseNumber || licenseNo;
+
+    if (!name || !resolvedLicenseNumber || !licenseCategory || !licenseExpiry || !contactNumber)
       return res.status(400).json({ error: 'All required fields must be filled' });
 
     const existing = await prisma.driver.findUnique({
-      where: { licenseNumber }
+      where: { licenseNumber: resolvedLicenseNumber }
     });
     if (existing)
       return res.status(409).json({
-        error: `License number ${licenseNumber} already registered`
+        error: `License number ${resolvedLicenseNumber} already registered`
       });
 
     // Warn if license already expired
@@ -90,15 +92,15 @@ router.post('/', verifyToken,
 
     const driver = await prisma.driver.create({
       data: {
-        name, licenseNumber, licenseCategory,
+        name, licenseNumber: resolvedLicenseNumber, licenseCategory,
         licenseExpiry: expiry, contactNumber, region,
         safetyScore: parseFloat(safetyScore) || 100
       }
     });
 
     const io = req.app.get('io');
-    io.to('dashboard').emit('driver-added', driver);
-    res.status(201).json(driver);
+    io.to('dashboard').emit('driver-added', { ...driver, licenseNo: driver.licenseNumber });
+    res.status(201).json({ ...driver, licenseNo: driver.licenseNumber });
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Something went wrong' });
@@ -128,7 +130,7 @@ router.put('/:id', verifyToken,
         status
       }
     });
-    res.json(driver);
+    res.json({ ...driver, licenseNo: driver.licenseNumber });
   } catch (e) {
     res.status(500).json({ error: 'Something went wrong' });
   }
@@ -147,7 +149,29 @@ router.get('/available/dispatch', verifyToken, async (req, res) => {
         licenseExpiry: { gt: now }
       }
     });
-    res.json(drivers);
+    res.json(drivers.map(d => ({ ...d, licenseNo: d.licenseNumber })));
+  } catch (e) {
+    res.status(500).json({ error: 'Something went wrong' });
+  }
+});
+
+// DELETE (soft delete)
+router.delete('/:id', verifyToken,
+  requireRoles('FLEET_MANAGER'), async (req, res) => {
+  try {
+    const driver = await prisma.driver.findUnique({
+      where: { id: req.params.id }
+    });
+    if (!driver) return res.status(404).json({ error: 'Driver not found' });
+    if (driver.status === 'ON_TRIP')
+      return res.status(400).json({
+        error: 'Cannot delete a driver that is currently on a trip'
+      });
+    await prisma.driver.update({
+      where: { id: req.params.id },
+      data: { isActive: false }
+    });
+    res.json({ message: 'Driver removed from fleet' });
   } catch (e) {
     res.status(500).json({ error: 'Something went wrong' });
   }

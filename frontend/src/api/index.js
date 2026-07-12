@@ -21,6 +21,7 @@ export const driversAPI = {
   getOne: (id) => api.get(`/drivers/${id}`),
   create: (data) => api.post('/drivers', data),
   update: (id, data) => api.put(`/drivers/${id}`, data),
+  delete: (id) => api.delete(`/drivers/${id}`),
   getAvailable: () => api.get('/drivers/available/dispatch'),
 };
 
@@ -63,12 +64,14 @@ export const settingsAPI = {
 
 export const reportsAPI = {
   getAnalytics: (params) => api.get('/reports/analytics', { params }),
-  exportCSV: (type) => api.get(`/reports/export/csv?type=${type}`,
-    { responseType: 'blob' }),
-  exportPDF: () => api.get('/reports/export/pdf',
-    { responseType: 'blob' }),
+  exportCSV: (type, params) => api.get(`/reports/export/csv`, { params: { type, ...params }, responseType: 'blob' }),
+  exportPDF: (params) => api.get('/reports/export/pdf', { params, responseType: 'blob' }),
 };
 
 export const aiAPI = {
   chat: (message) => api.post('/ai/chat', { message }),
+};
+
+export const healthAPI = {
+  check: () => api.get('/health'),
 };

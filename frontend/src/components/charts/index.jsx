@@ -3,7 +3,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 
-const BRAND_COLORS = ['#f97316', '#3b82f6', '#22c55e', '#a855f7', '#eab308', '#ef4444'];
+const BRAND_COLORS = ['#10b981', '#3b82f6', '#22c55e', '#a855f7', '#eab308', '#ef4444'];
 
 const tooltipStyle = {
   contentStyle: {
@@ -13,7 +13,7 @@ const tooltipStyle = {
     color: '#f1f5f9',
     fontSize: 13,
   },
-  cursor: { fill: 'rgba(249, 115, 22, 0.05)' },
+  cursor: { fill: 'rgba(16, 185, 129, 0.05)' },
 };
 
 export const ExpenseTrendChart = ({ data = [] }) => (
@@ -21,8 +21,8 @@ export const ExpenseTrendChart = ({ data = [] }) => (
     <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
       <defs>
         <linearGradient id="totalGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="5%"  stopColor="#f97316" stopOpacity={0.3} />
-          <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+          <stop offset="5%"  stopColor="#10b981" stopOpacity={0.3} />
+          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
         </linearGradient>
         <linearGradient id="fuelGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="5%"  stopColor="#3b82f6" stopOpacity={0.3} />
@@ -35,7 +35,7 @@ export const ExpenseTrendChart = ({ data = [] }) => (
              tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
       <Tooltip {...tooltipStyle} formatter={(v) => [`₹${v.toLocaleString()}`, '']} />
       <Legend wrapperStyle={{ color: '#94a3b8', fontSize: 12 }} />
-      <Area type="monotone" dataKey="total" stroke="#f97316" strokeWidth={2}
+      <Area type="monotone" dataKey="total" stroke="#10b981" strokeWidth={2}
             fill="url(#totalGrad)" name="Total" />
       <Area type="monotone" dataKey="fuel" stroke="#3b82f6" strokeWidth={2}
             fill="url(#fuelGrad)" name="Fuel" />
@@ -67,7 +67,7 @@ export const ExpenseCategoryChart = ({ data = [] }) => (
       <YAxis type="category" dataKey="category" tick={{ fill: '#94a3b8', fontSize: 11 }}
              axisLine={false} tickLine={false} width={100} />
       <Tooltip {...tooltipStyle} formatter={(v) => [`₹${v.toLocaleString()}`, 'Amount']} />
-      <Bar dataKey="_sum.amount" fill="#f97316" radius={[0, 6, 6, 0]} name="Amount" />
+      <Bar dataKey="_sum.amount" fill="#10b981" radius={[0, 6, 6, 0]} name="Amount" />
     </BarChart>
   </ResponsiveContainer>
 );

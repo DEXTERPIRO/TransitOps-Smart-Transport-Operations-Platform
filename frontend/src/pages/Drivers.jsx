@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { driversAPI } from '../api';
 import { useAuthStore } from '../store/authStore';
-import Modal from '../components/ui/Modal';
-import StatusBadge from '../components/ui/StatusBadge';
+import { PageHeader, SectionHeader, EmptyState, StatusBadge, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
 import {
   Users, Search, Plus, Pencil, AlertTriangle,
@@ -44,18 +43,18 @@ function validate(form) {
 function SafetyBar({ score }) {
   const pct = Math.max(0, Math.min(100, score || 0));
   const color = pct >= 90
-    ? 'bg-green-500'
+    ? 'bg-success'
     : pct >= 70
-      ? 'bg-amber-500'
-      : 'bg-red-500';
+      ? 'bg-warning'
+      : 'bg-danger';
   return (
     <div className="flex items-center gap-2">
-      <div className="w-20 h-1.5 bg-slate-700 rounded-full overflow-hidden">
+      <div className="w-20 h-1.5 bg-recessed rounded-full overflow-hidden shadow-[inset_1px_1px_1px_rgba(0,0,0,0.1)]">
         <div className={`h-full rounded-full transition-all ${color}`}
           style={{ width: `${pct}%` }} />
       </div>
-      <span className={`text-xs font-mono font-medium
-        ${pct >= 90 ? 'text-green-400' : pct >= 70 ? 'text-amber-400' : 'text-red-400'}`}>
+      <span className={`text-xs font-mono font-bold
+        ${pct >= 90 ? 'text-success' : pct >= 70 ? 'text-warning' : 'text-danger'}`}>
         {pct}
       </span>
     </div>
@@ -70,23 +69,20 @@ function LicenseStatus({ expiry }) {
 
   if (daysLeft < 0) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium
-                        text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full">
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold font-mono uppercase tracking-wider text-danger bg-danger/10 px-2 py-0.5 rounded-full border border-danger/20">
         <AlertTriangle size={11} /> EXPIRED
       </span>
     );
   }
   if (daysLeft <= 30) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium
-                        text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
+      <span className="inline-flex items-center gap-1 text-[10px] font-bold font-mono uppercase tracking-wider text-warning bg-warning/10 px-2 py-0.5 rounded-full border border-warning/20">
         <AlertTriangle size={11} /> Expiring in {daysLeft}d
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium
-                      text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">
+    <span className="inline-flex items-center gap-1 text-[10px] font-bold font-mono uppercase tracking-wider text-success bg-success/10 px-2 py-0.5 rounded-full border border-success/20">
       <CheckCircle size={11} /> Valid
     </span>
   );
@@ -95,10 +91,10 @@ function LicenseStatus({ expiry }) {
 function Field({ label, error, children }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-300 mb-1.5">{label}</label>
+      <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">{label}</label>
       {children}
       {error && (
-        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+        <p className="text-danger text-xs font-mono mt-1 flex items-center gap-1">
           <AlertCircle size={11} /> {error}
         </p>
       )}
@@ -198,53 +194,36 @@ export default function Drivers() {
   };
 
   const inputCls = (err) =>
-    `w-full bg-slate-800 border rounded-xl px-3 py-2.5 text-white
-     placeholder-slate-500 text-sm focus:outline-none focus:ring-2 transition
-     ${err
-       ? 'border-red-500 focus:ring-red-500/30'
-       : 'border-slate-700 focus:ring-orange-500/30 focus:border-orange-500'}`;
+    `input ${err ? 'ring-2 ring-danger' : ''}`;
 
   const selectCls = (err) =>
-    `w-full bg-slate-800 border rounded-xl px-3 py-2.5 text-white text-sm
-     focus:outline-none focus:ring-2 transition
-     ${err
-       ? 'border-red-500 focus:ring-red-500/30'
-       : 'border-slate-700 focus:ring-orange-500/30 focus:border-orange-500'}`;
+    `select ${err ? 'ring-2 ring-danger' : ''}`;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Driver Management</h1>
-          <p className={`text-sm mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            {drivers.length} driver{drivers.length !== 1 ? 's' : ''} registered
-          </p>
-        </div>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600
-                     text-white px-4 py-2.5 rounded-xl text-sm font-medium
-                     transition-all shadow-lg shadow-orange-500/20"
-        >
-          <Plus size={16} /> Add Driver
-        </button>
-      </div>
+      <PageHeader
+        title="Driver Management"
+        subtitle={`${drivers.length} driver${drivers.length !== 1 ? 's' : ''} registered`}
+        icon={Users}
+        action={
+          <button
+            onClick={openAdd}
+            className="btn-primary"
+          >
+            <Plus size={16} /> Add Driver
+          </button>
+        }
+      />
 
       {/* Search + Filters */}
-      <div className={`flex flex-col sm:flex-row gap-3 p-4 rounded-2xl border
-        ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+      <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-2xl bg-panel shadow-[var(--shadow-card)] border border-[var(--border-color)]">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-sub" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search name, license number..."
-            className={`w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm
-              focus:outline-none focus:ring-2 focus:ring-orange-500/30
-              ${isDark
-                ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'
-                : 'bg-slate-50 border-slate-200 text-slate-900'}`}
+            className="input pl-9"
           />
         </div>
         {[
@@ -255,11 +234,7 @@ export default function Drivers() {
             key={f.key}
             value={filters[f.key]}
             onChange={e => setFilters(prev => ({ ...prev, [f.key]: e.target.value }))}
-            className={`text-sm px-3 py-2.5 rounded-xl border focus:outline-none
-              focus:ring-2 focus:ring-orange-500/30
-              ${isDark
-                ? 'bg-slate-800 border-slate-700 text-slate-300'
-                : 'bg-slate-50 border-slate-200 text-slate-700'}`}
+            className="select w-auto py-1.5 px-3"
           >
             <option value="">{f.label}</option>
             {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
@@ -269,74 +244,67 @@ export default function Drivers() {
 
       {/* Table / Skeleton / Empty */}
       {loading ? (
-        <div className="space-y-2 animate-pulse">
+        <div className="space-y-2">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className={`h-14 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+            <div key={i} className="h-14 rounded-xl bg-recessed animate-pulse shadow-[var(--shadow-recessed)]" />
           ))}
         </div>
       ) : drivers.length === 0 ? (
-        <div className={`flex flex-col items-center justify-center py-20 rounded-2xl border
-          ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-          <PackageOpen size={48} className="text-slate-600 mb-3" />
-          <p className="text-slate-500 font-medium">No drivers found</p>
-          <p className="text-slate-600 text-sm mt-1">
-            {search || Object.values(filters).some(Boolean)
+        <EmptyState
+          icon={PackageOpen}
+          title="No drivers found"
+          description={
+            search || Object.values(filters).some(Boolean)
               ? 'Try adjusting your filters'
-              : 'Add your first driver to get started'}
-          </p>
-        </div>
+              : 'Add your first driver to get started'
+          }
+        />
       ) : (
         <>
           {/* Desktop Table */}
-          <div className={`hidden md:block rounded-2xl border overflow-hidden
-            ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <table className="w-full text-sm">
+          <div className="hidden md:block rounded-2xl bg-panel shadow-[var(--shadow-card)] p-1 border border-[var(--border-color)] overflow-hidden">
+            <table className="w-full border-collapse">
               <thead>
-                <tr className={`text-xs uppercase tracking-wider font-semibold
-                  ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-50 text-slate-500'}`}>
+                <tr className="bg-recessed/30">
                   {['Name', 'License No', 'Category', 'Expiry', 'Contact', 'Safety', 'Status', 'Actions']
-                    .map(h => <th key={h} className="px-4 py-3 text-left">{h}</th>)}
+                    .map(h => <th key={h} className="table-header font-mono text-xs font-bold uppercase tracking-wider text-text-sub border-b border-b-shadow/50">{h}</th>)}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody>
                 {drivers.map(d => {
                   const isSuspended = d.status === 'SUSPENDED';
                   return (
                     <tr key={d.id}
-                      className={`transition-colors
-                        ${isSuspended ? 'bg-red-500/5' : ''}
-                        ${isDark ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}`}>
-                      <td className="px-4 py-3 font-medium">{d.name}</td>
-                      <td className="px-4 py-3">
-                        <span className="font-mono text-xs text-slate-300">{d.licenseNo}</span>
+                      className={`table-row ${isSuspended ? 'bg-danger/5' : ''}`}>
+                      <td className="table-cell font-medium text-text-main border-b border-b-shadow/20">{d.name}</td>
+                      <td className="table-cell border-b border-b-shadow/20">
+                        <span className="font-mono text-xs text-text-main">{d.licenseNo}</span>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-mono px-2 py-0.5 rounded-lg
-                          ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
+                      <td className="table-cell border-b border-b-shadow/20">
+                        <span className="text-xs font-mono text-text-main bg-recessed px-2 py-0.5 rounded-lg">
                           {d.licenseCategory}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="table-cell border-b border-b-shadow/20">
                         <div className="flex flex-col gap-1">
-                          <span className="text-xs font-mono text-slate-400">
+                          <span className="text-xs font-mono text-text-sub">
                             {new Date(d.licenseExpiry).toLocaleDateString('en-IN')}
                           </span>
                           <LicenseStatus expiry={d.licenseExpiry} />
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs text-slate-400">
+                      <td className="table-cell font-mono text-xs text-text-sub border-b border-b-shadow/20">
                         {d.contactNumber}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="table-cell border-b border-b-shadow/20">
                         <SafetyBar score={d.safetyScore} />
                       </td>
-                      <td className="px-4 py-3"><StatusBadge status={d.status} /></td>
-                      <td className="px-4 py-3">
+                      <td className="table-cell border-b border-b-shadow/20"><StatusBadge status={d.status} /></td>
+                      <td className="table-cell border-b border-b-shadow/20">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => openEdit(d)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400
-                                       hover:bg-blue-500/10 transition"
+                            className="btn-ghost p-1.5"
                           >
                             <Pencil size={14} />
                           </button>
@@ -344,9 +312,7 @@ export default function Drivers() {
                             <select
                               value={d.status}
                               onChange={e => handleStatusChange(d, e.target.value)}
-                              className="text-xs bg-slate-800 border border-slate-700
-                                         rounded-lg px-2 py-1 text-slate-300
-                                         focus:outline-none focus:ring-1 focus:ring-orange-500/30"
+                              className="select text-xs py-1 px-2 w-auto"
                             >
                               {STATUSES_EDIT.map(s =>
                                 <option key={s} value={s}>{s}</option>
@@ -368,40 +334,34 @@ export default function Drivers() {
               const isSuspended = d.status === 'SUSPENDED';
               return (
                 <div key={d.id}
-                  className={`rounded-2xl border p-4
-                    ${isSuspended ? 'border-red-500/30 bg-red-500/5' : ''}
-                    ${isDark && !isSuspended ? 'bg-slate-900 border-slate-800' : ''}
-                    ${!isDark && !isSuspended ? 'bg-white border-slate-200' : ''}`}>
+                  className={`card ${isSuspended ? 'border border-danger/30' : ''}`}>
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="font-medium">{d.name}</p>
-                      <span className="font-mono text-xs text-slate-400">{d.licenseNo}</span>
+                      <p className="font-medium text-text-main">{d.name}</p>
+                      <span className="font-mono text-xs text-text-sub">{d.licenseNo}</span>
                     </div>
                     <StatusBadge status={d.status} />
                   </div>
                   <div className="flex items-center gap-2 mt-1">
                     <LicenseStatus expiry={d.licenseExpiry} />
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-text-sub font-mono">
                       {new Date(d.licenseExpiry).toLocaleDateString('en-IN')}
                     </span>
                   </div>
-                  <div className="mt-3">
-                    <span className="text-xs text-slate-500 mr-2">Safety</span>
+                  <div className="mt-3 font-mono text-xs">
+                    <span className="text-text-sub mr-2">SAFETY SCORE</span>
                     <SafetyBar score={d.safetyScore} />
                   </div>
-                  <div className="flex gap-2 mt-3 pt-3 border-t border-slate-800">
+                  <div className="flex gap-2 mt-3 pt-3 border-t border-b-shadow/30">
                     <button onClick={() => openEdit(d)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2
-                                 text-xs text-blue-400 hover:bg-blue-500/10 rounded-lg transition">
+                      className="btn-ghost flex-1 py-1.5 justify-center">
                       <Pencil size={13} /> Edit
                     </button>
                     {d.status !== 'ON_TRIP' && (
                       <select
                         value={d.status}
                         onChange={e => handleStatusChange(d, e.target.value)}
-                        className="text-xs bg-slate-800 border border-slate-700
-                                   rounded-lg px-2 py-1.5 text-slate-300
-                                   focus:outline-none flex-1"
+                        className="select text-xs py-1 px-2 flex-1"
                       >
                         {STATUSES_EDIT.map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
@@ -415,11 +375,8 @@ export default function Drivers() {
       )}
 
       {/* Info note */}
-      <div className={`flex items-start gap-2 px-4 py-3 rounded-xl border text-xs
-        ${isDark
-          ? 'bg-slate-900 border-slate-800 text-slate-500'
-          : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
-        <Info size={14} className="shrink-0 mt-0.5" />
+      <div className="flex items-start gap-2 px-4 py-3 rounded-xl border border-warning/20 bg-warning/5 text-xs text-text-main font-mono uppercase tracking-wider">
+        <Info size={14} className="shrink-0 mt-0.5 text-warning" />
         <span>
           Suspended or expired-license drivers are automatically hidden from trip dispatch.
           Only AVAILABLE drivers with a valid license can be assigned to trips.
@@ -505,23 +462,17 @@ export default function Drivers() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition
-                ${isDark
-                  ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+              className="btn-secondary flex-1"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white
-                         py-2.5 rounded-xl text-sm font-medium transition
-                         flex items-center justify-center gap-2 disabled:opacity-50"
+              className="btn-primary flex-1 disabled:opacity-50"
             >
               {saving && (
-                <div className="w-3.5 h-3.5 border-2 border-white/30
-                                border-t-white rounded-full animate-spin" />
+                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
               {editDriver ? 'Save Changes' : 'Add Driver'}
             </button>

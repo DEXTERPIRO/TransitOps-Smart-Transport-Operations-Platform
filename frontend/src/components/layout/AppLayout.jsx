@@ -9,6 +9,7 @@ import {
   Menu, X, ChevronRight, Bell, Bot
 } from 'lucide-react';
 import AIChatbot from '../ui/AIChatbot';
+import Logo from '../ui/Logo';
 
 const NAV_ITEMS = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard',
@@ -77,16 +78,16 @@ export default function AppLayout() {
       <aside className={`
         fixed lg:static inset-y-0 left-0 z-50
         w-64 flex flex-col transition-transform duration-300
-        bg-[var(--background)] border-r border-black/10 dark:border-white/5 shadow-[var(--shadow-card)]
+        bg-[var(--background)] bg-gradient-to-br from-[var(--background)] to-[var(--foreground)] border-r border-b-shadow/30 shadow-[var(--shadow-card)]
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
 
         {/* Logo */}
-        <div className="p-6 border-b border-black/10 dark:border-white/5 flex items-center justify-between">
+        <div className="p-6 border-b border-b-shadow/30 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center shadow-[var(--shadow-sharp)]">
-                <Truck size={16} className="text-white" />
+              <div className="w-8 h-8 bg-[var(--muted)] border border-b-shadow/30 rounded-lg flex items-center justify-center shadow-[var(--shadow-recessed)]">
+                <Logo size={16} />
               </div>
               <span className="text-base font-extrabold font-mono tracking-wider text-[var(--text-primary)]">
                 TRANSITOPS
@@ -98,16 +99,16 @@ export default function AppLayout() {
           </div>
           <button
             onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-slate-400 hover:text-white"
+            className="lg:hidden text-text-sub hover:text-text-main"
           >
             <X size={20} />
           </button>
         </div>
 
         {/* User info */}
-        <div className="px-4 py-4 border-b border-black/10 dark:border-white/5">
+        <div className="px-4 py-4 border-b border-b-shadow/30">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 dark:text-orange-400 font-bold text-sm shadow-[var(--shadow-sharp)]">
+            <div className="w-9 h-9 rounded-full bg-[var(--background)] shadow-[var(--shadow-recessed)] flex items-center justify-center text-[var(--accent)] font-bold text-sm">
               {user?.name?.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
@@ -131,8 +132,8 @@ export default function AppLayout() {
                 flex items-center gap-3 px-3.5 py-2.5 rounded-xl
                 text-xs uppercase font-mono font-bold tracking-wider transition-all group
                 ${isActive
-                  ? 'bg-[var(--accent)] text-white shadow-[var(--shadow-sharp)] active:translate-y-[1px]'
-                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--foreground)] hover:shadow-[var(--shadow-card)]'
+                  ? 'bg-[var(--muted)] text-[var(--accent)] shadow-[var(--shadow-recessed)] translate-y-[1px]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--foreground)] hover:shadow-[var(--shadow-card)] hover:-translate-y-[1px]'
                 }
               `}
             >
@@ -145,7 +146,7 @@ export default function AppLayout() {
         </nav>
 
         {/* Bottom actions */}
-        <div className="p-4 border-t border-black/10 dark:border-white/5 space-y-3">
+        <div className="p-4 border-t border-b-shadow/30 space-y-3">
           {/* AI Assistant Button */}
           <button
             onClick={() => setShowAI(!showAI)}
@@ -182,7 +183,7 @@ export default function AppLayout() {
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs uppercase font-mono font-bold tracking-wider transition-all
-                       bg-[var(--background)] shadow-[var(--shadow-card)] active:shadow-[var(--shadow-pressed)] text-red-500 hover:text-red-400"
+                       bg-[var(--background)] shadow-[var(--shadow-card)] active:shadow-[var(--shadow-pressed)] text-danger hover:text-red-400"
           >
             <LogOut size={16} />
             <span>Logout</span>
@@ -194,7 +195,7 @@ export default function AppLayout() {
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Top bar */}
-        <header className="h-14 flex items-center justify-between px-4 lg:px-6 border-b border-black/10 dark:border-white/5 flex-shrink-0 bg-[var(--background)]">
+        <header className="h-14 flex items-center justify-between px-4 lg:px-6 border-b border-b-shadow/30 flex-shrink-0 bg-panel shadow-[var(--shadow-card)] z-10">
           <button
             onClick={() => setSidebarOpen(true)}
             className="lg:hidden p-2 rounded-lg text-[var(--text-muted)] hover:bg-[var(--foreground)]"
@@ -204,11 +205,11 @@ export default function AppLayout() {
 
           <div className="flex items-center gap-2 ml-auto">
             {/* Live status dot */}
-            <div className="flex items-center gap-2 text-[10px] font-mono font-bold tracking-wider text-green-500 dark:text-green-400">
-              <div className="w-2.5 h-2.5 bg-green-500 dark:bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]" />
+            <div className="flex items-center gap-2 text-[10px] font-mono font-bold tracking-wider text-success">
+              <div className="w-2.5 h-2.5 bg-success rounded-full animate-pulse shadow-[var(--shadow-glow-success)]" />
               LIVE
             </div>
-            <div className="h-6 w-px mx-2 bg-black/10 dark:bg-white/5" />
+            <div className="h-6 w-px mx-2 bg-b-shadow/30" />
             <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--text-muted)]">
               {new Date().toLocaleDateString('en-IN',
                 { weekday: 'short', day: '2-digit',

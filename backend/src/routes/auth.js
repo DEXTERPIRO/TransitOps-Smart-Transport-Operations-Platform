@@ -1,10 +1,9 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { verifyToken } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
-const prisma = new PrismaClient();
 
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10 });
 

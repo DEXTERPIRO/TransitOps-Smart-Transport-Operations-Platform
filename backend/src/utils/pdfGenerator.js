@@ -17,7 +17,7 @@ const generateReportPDF = (data) => {
     // Header
     doc
       .fontSize(22)
-      .fillColor('#f97316')
+      .fillColor('#10b981')
       .text('TransitOps', { align: 'center' });
     doc
       .fontSize(14)

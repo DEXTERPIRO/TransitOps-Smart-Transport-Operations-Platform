@@ -22,15 +22,15 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
       {/* Tactile Panel */}
       <div 
         style={{ backgroundImage: screwBg }}
-        className={`relative w-full ${sizes[size]} rounded-2xl border border-transparent shadow-[var(--shadow-floating)] max-h-[90vh] overflow-y-auto bg-[var(--background)] text-[var(--text-primary)] transition-all pt-4`}>
+        className={`relative w-full ${sizes[size]} rounded-2xl border border-[var(--border-color)] shadow-[var(--shadow-floating)] max-h-[90vh] overflow-y-auto bg-[var(--background)] text-[var(--text-primary)] transition-all pt-4`}>
         
         {/* Modal Header */}
-        <div className="flex items-center justify-between px-6 pb-4 border-b border-black/10 dark:border-white/5">
+        <div className="flex items-center justify-between px-6 pb-4 border-b border-[var(--border-color)]">
           <h3 className="font-bold text-sm uppercase font-mono tracking-wider text-[var(--text-primary)]">
             {title}
           </h3>
           <button onClick={onClose}
-            className="p-1.5 rounded-lg bg-[var(--background)] shadow-[var(--shadow-card)] active:shadow-[var(--shadow-pressed)] text-slate-400 hover:text-[var(--accent)] transition-all">
+            className="p-1.5 rounded-lg bg-[var(--background)] shadow-[var(--shadow-card)] active:shadow-[var(--shadow-pressed)] text-[var(--text-muted)] hover:text-[var(--accent)] transition-all">
             <X size={16} />
           </button>
         </div>

@@ -33,6 +33,28 @@ export default function App() {
   return (
     <BrowserRouter>
       <AppInitializer>
+        {/* Global SVG Noise Overlay Layer */}
+        <svg
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            pointerEvents: 'none',
+            zIndex: 9999,
+            opacity: theme === 'dark' ? 0.08 : 0.16, // 8% in dark mode, 16% in light mode
+            mixBlendMode: theme === 'dark' ? 'overlay' : 'multiply'
+          }}
+          aria-hidden="true"
+        >
+          <filter id="grain">
+            <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" />
+            <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.05 0" />
+          </filter>
+          <rect width="100%" height="100%" filter="url(#grain)" />
+        </svg>
+
         <Toaster
           position="top-right"
           toastOptions={{

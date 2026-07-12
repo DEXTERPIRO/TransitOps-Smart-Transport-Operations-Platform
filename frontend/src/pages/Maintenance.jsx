@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { maintenanceAPI, vehiclesAPI } from '../api';
 import { useAuthStore } from '../store/authStore';
-import Modal from '../components/ui/Modal';
-import StatusBadge from '../components/ui/StatusBadge';
+import { PageHeader, SectionHeader, EmptyState, StatusBadge, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
 import {
   Wrench, Plus, CheckCircle, AlertCircle,
@@ -14,12 +13,12 @@ const TYPES = ['OIL_CHANGE','TYRE_REPLACE','ENGINE_REPAIR',
                'BRAKE_SERVICE','GENERAL_SERVICE','OTHER'];
 
 const TYPE_COLORS = {
-  OIL_CHANGE:      'bg-amber-500/15 text-amber-400',
-  TYRE_REPLACE:    'bg-blue-500/15 text-blue-400',
-  ENGINE_REPAIR:   'bg-red-500/15 text-red-400',
-  BRAKE_SERVICE:   'bg-purple-500/15 text-purple-400',
-  GENERAL_SERVICE: 'bg-green-500/15 text-green-400',
-  OTHER:           'bg-slate-500/15 text-slate-400',
+  OIL_CHANGE:      'bg-warning/10 text-warning border border-warning/20',
+  TYRE_REPLACE:    'bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20',
+  ENGINE_REPAIR:   'bg-danger/10 text-danger border border-danger/20',
+  BRAKE_SERVICE:   'bg-purple-500/10 text-purple-400 border border-purple-500/20',
+  GENERAL_SERVICE: 'bg-success/10 text-success border border-success/20',
+  OTHER:           'bg-recessed text-text-sub border border-b-shadow/20',
 };
 
 const EMPTY_FORM = {
@@ -30,7 +29,7 @@ function TypeBadge({ type }) {
   return (
     <span className={`text-xs font-mono px-2 py-0.5 rounded-lg font-medium
                       ${TYPE_COLORS[type] || TYPE_COLORS.OTHER}`}>
-      {type?.replace('_', ' ')}
+      {type?.replaceAll('_', ' ')}
     </span>
   );
 }
@@ -38,10 +37,10 @@ function TypeBadge({ type }) {
 function Field({ label, error, children }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-400 mb-1">{label}</label>
+      <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">{label}</label>
       {children}
       {error && (
-        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+        <p className="text-danger text-xs font-mono mt-1 flex items-center gap-1">
           <AlertCircle size={10} /> {error}
         </p>
       )}
@@ -137,37 +136,24 @@ export default function Maintenance() {
   };
 
   const inputCls = (err) =>
-    `w-full bg-slate-800 border rounded-xl px-3 py-2.5 text-white
-     placeholder-slate-500 text-sm focus:outline-none focus:ring-2 transition
-     ${err
-       ? 'border-red-500 focus:ring-red-500/30'
-       : 'border-slate-700 focus:ring-orange-500/30 focus:border-orange-500'}`;
+    `input ${err ? 'ring-2 ring-danger' : ''}`;
 
   const selectCls = (err) =>
-    `w-full bg-slate-800 border rounded-xl px-3 py-2.5 text-white text-sm
-     focus:outline-none focus:ring-2 transition
-     ${err
-       ? 'border-red-500 focus:ring-red-500/30'
-       : 'border-slate-700 focus:ring-orange-500/30 focus:border-orange-500'}`;
+    `select ${err ? 'ring-2 ring-danger' : ''}`;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Maintenance Management</h1>
-        <p className={`text-sm mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          Track vehicle service records and shop status
-        </p>
-      </div>
+      <PageHeader
+        title="Maintenance Management"
+        subtitle="Track vehicle service records and shop status"
+        icon={Wrench}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
         {/* ── LEFT: New Service Record Form ───────────────────────────── */}
-        <div className={`rounded-2xl border p-5
-          ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-          <h2 className="font-semibold text-base mb-4 flex items-center gap-2">
-            <Wrench size={16} className="text-orange-400" /> New Service Record
-          </h2>
+        <div className="rounded-2xl bg-panel shadow-[var(--shadow-card)] p-5 border border-[var(--border-color)]">
+          <SectionHeader icon={Wrench} title="New Service Record" />
 
           <form onSubmit={handleSubmit} className="space-y-3">
             <Field label="Vehicle *" error={errors.vehicleId}>
@@ -187,13 +173,13 @@ export default function Maintenance() {
                 ))}
               </select>
               {selectedVehicle?.status === 'IN_SHOP' && (
-                <p className="text-amber-400 text-xs mt-1 flex items-center gap-1">
+                <p className="text-warning text-xs mt-1 flex items-center gap-1 font-mono">
                   <AlertCircle size={11} />
                   This vehicle is already In Shop
                 </p>
               )}
               {selectedVehicle?.status === 'ON_TRIP' && (
-                <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+                <p className="text-danger text-xs mt-1 flex items-center gap-1 font-mono">
                   <AlertCircle size={11} />
                   Cannot service a vehicle currently on a trip
                 </p>
@@ -251,11 +237,7 @@ export default function Maintenance() {
             <button
               type="submit"
               disabled={selectedVehicle?.status === 'ON_TRIP'}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white
-                         py-2.5 rounded-xl text-sm font-semibold transition-all
-                         flex items-center justify-center gap-2 mt-2
-                         shadow-lg shadow-orange-500/20 disabled:opacity-40
-                         disabled:cursor-not-allowed"
+              className="btn-primary w-full mt-2"
             >
               <Wrench size={15} /> Create Service Record
             </button>
@@ -264,79 +246,67 @@ export default function Maintenance() {
 
         {/* ── RIGHT: Live Service Log ─────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="font-semibold text-base flex items-center gap-2">
-            <Wrench size={16} className="text-amber-400" /> Live Service Log
-            <span className={`text-xs font-mono ml-1
-              ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-              ({logs.length} records)
-            </span>
-          </h2>
+          <SectionHeader icon={Wrench} title="Live Service Log" badge={logs.length} />
 
           {loading ? (
-            <div className="space-y-2 animate-pulse">
+            <div className="space-y-2">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className={`h-14 rounded-xl
-                  ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+                <div key={i} className="h-14 rounded-xl bg-recessed animate-pulse shadow-[var(--shadow-recessed)]" />
               ))}
             </div>
           ) : logs.length === 0 ? (
-            <div className={`flex flex-col items-center justify-center py-20
-                             rounded-2xl border
-              ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-              <PackageOpen size={40} className="text-slate-600 mb-3" />
-              <p className="text-slate-500 text-sm">No maintenance records</p>
-            </div>
+            <EmptyState
+              icon={PackageOpen}
+              title="No maintenance records"
+              description="No vehicle service history has been created yet"
+            />
           ) : (
-            <div className={`rounded-2xl border overflow-hidden
-              ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="rounded-2xl bg-panel shadow-[var(--shadow-card)] p-1 border border-[var(--border-color)] overflow-hidden">
 
               {/* Desktop Table */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full border-collapse">
                   <thead>
-                    <tr className={`text-xs uppercase tracking-wider font-semibold
-                      ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-50 text-slate-500'}`}>
+                    <tr className="bg-recessed/30">
                       {['Vehicle','Type','Description','Cost','Center','Status','Started','Action']
-                        .map(h => <th key={h} className="px-4 py-3 text-left whitespace-nowrap">{h}</th>)}
+                        .map(h => <th key={h} className="table-header font-mono text-xs font-bold uppercase tracking-wider text-text-sub border-b border-b-shadow/50">{h}</th>)}
                     </tr>
                   </thead>
-                  <tbody className={`divide-y ${isDark ? 'divide-slate-800' : 'divide-slate-100'}`}>
+                  <tbody>
                     {logs.map(log => (
                       <tr key={log.id}
-                        className={`transition-colors
-                          ${isDark ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}`}>
-                        <td className="px-4 py-3">
-                          <div className="font-mono text-orange-400 text-xs font-bold">
+                        className="table-row">
+                        <td className="table-cell border-b border-b-shadow/20">
+                          <div className="font-mono text-accent text-xs font-bold">
                             {log.vehicle?.registrationNo}
                           </div>
-                          <div className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          <div className="text-xs text-text-sub">
                             {log.vehicle?.name}
                           </div>
                         </td>
-                        <td className="px-4 py-3"><TypeBadge type={log.type} /></td>
-                        <td className="px-4 py-3">
-                          <span className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <td className="table-cell border-b border-b-shadow/20"><TypeBadge type={log.type} /></td>
+                        <td className="table-cell border-b border-b-shadow/20">
+                          <span className="text-xs text-text-sub">
                             {log.description || '—'}
                           </span>
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs">
+                        <td className="table-cell font-mono text-xs text-text-main border-b border-b-shadow/20">
                           ₹{log.cost?.toLocaleString()}
                         </td>
-                        <td className="px-4 py-3 text-xs">
+                        <td className="table-cell text-xs text-text-main border-b border-b-shadow/20">
                           {log.serviceCenter || '—'}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="table-cell border-b border-b-shadow/20">
                           <StatusBadge status={log.status} />
                         </td>
-                        <td className="px-4 py-3 text-xs font-mono text-slate-400">
+                        <td className="table-cell text-xs font-mono text-text-sub border-b border-b-shadow/20">
                           {new Date(log.createdAt).toLocaleDateString('en-IN')}
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="table-cell border-b border-b-shadow/20">
                           {log.status === 'ACTIVE' && (
                             <button
                               onClick={() => setCloseTarget(log)}
-                              className="flex items-center gap-1 text-xs text-green-400
-                                         hover:bg-green-500/10 px-2 py-1 rounded-lg transition"
+                              className="btn-ghost text-success px-2 py-1"
                             >
                               <CheckCircle size={12} /> Close
                             </button>
@@ -349,15 +319,15 @@ export default function Maintenance() {
               </div>
 
               {/* Mobile Cards */}
-              <div className="md:hidden divide-y divide-slate-800">
+              <div className="md:hidden divide-y divide-b-shadow/20">
                 {logs.map(log => (
                   <div key={log.id} className="p-4 space-y-2">
                     <div className="flex items-start justify-between">
                       <div>
-                        <span className="font-mono text-orange-400 font-bold text-xs">
+                        <span className="font-mono text-accent font-bold text-xs">
                           {log.vehicle?.registrationNo}
                         </span>
-                        <span className={`text-xs ml-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <span className="text-xs ml-2 text-text-sub font-mono">
                           {log.vehicle?.name}
                         </span>
                       </div>
@@ -365,21 +335,19 @@ export default function Maintenance() {
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <TypeBadge type={log.type} />
-                      <span className="font-mono text-xs text-green-400">
+                      <span className="font-mono text-xs text-success font-bold">
                         ₹{log.cost?.toLocaleString()}
                       </span>
                     </div>
                     {log.description && (
-                      <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      <p className="text-text-sub text-xs font-mono">
                         {log.description}
                       </p>
                     )}
                     {log.status === 'ACTIVE' && (
                       <button
                         onClick={() => setCloseTarget(log)}
-                        className="flex items-center gap-1 text-xs text-green-400
-                                   hover:bg-green-500/10 px-2 py-1.5 rounded-lg
-                                   border border-green-500/20 transition w-full justify-center"
+                        className="btn-ghost text-success py-1.5 w-full justify-center"
                       >
                         <CheckCircle size={12} /> Close Maintenance
                       </button>
@@ -391,11 +359,8 @@ export default function Maintenance() {
           )}
 
           {/* Info box */}
-          <div className={`flex items-start gap-2 px-4 py-3 rounded-xl border text-xs
-            ${isDark
-              ? 'bg-slate-900 border-slate-800 text-slate-500'
-              : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
-            <Info size={14} className="shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2 px-4 py-3 rounded-xl border border-warning/20 bg-warning/5 text-xs text-text-main font-mono uppercase tracking-wider">
+            <Info size={14} className="shrink-0 mt-0.5 text-warning" />
             <span>
               Closing a maintenance record automatically restores the vehicle to{' '}
               <strong>Available</strong> status for dispatch. Retired vehicles stay Retired.
@@ -408,31 +373,24 @@ export default function Maintenance() {
       <Modal isOpen={confirmOpen} onClose={() => setConfirmOpen(false)}
              title="Confirm Maintenance" size="sm">
         <div className="space-y-4">
-          <div className={`p-4 rounded-xl border text-sm
-            ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-            <p className={isDark ? 'text-slate-300' : 'text-slate-700'}>
+          <div className="p-4 rounded-xl border border-b-shadow/30 bg-chassis shadow-[var(--shadow-recessed)] text-sm">
+            <p className="text-text-main">
               This will change{' '}
-              <b className="text-orange-400">{selectedVehicle?.name}</b>{' '}
+              <b className="text-accent">{selectedVehicle?.name}</b>{' '}
               ({selectedVehicle?.registrationNo}) status to{' '}
-              <b className="text-amber-400">In Shop</b> and remove it from
+              <b className="text-warning">In Shop</b> and remove it from
               dispatch until maintenance is closed.
             </p>
           </div>
           <div className="flex gap-3">
             <button onClick={() => setConfirmOpen(false)}
-              className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition
-                ${isDark
-                  ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+              className="btn-secondary flex-1">
               Cancel
             </button>
             <button onClick={handleConfirm} disabled={submitting}
-              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white
-                         py-2.5 rounded-xl text-sm font-medium transition
-                         flex items-center justify-center gap-2 disabled:opacity-50">
+              className="btn-primary flex-1 disabled:opacity-50">
               {submitting && (
-                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white
-                                rounded-full animate-spin" />
+                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
               Confirm
             </button>
@@ -444,23 +402,18 @@ export default function Maintenance() {
       <Modal isOpen={!!closeTarget} onClose={() => setCloseTarget(null)}
              title="Close Maintenance Record" size="sm">
         <div className="space-y-4">
-          <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+          <p className="text-sm text-text-main">
             Close maintenance for{' '}
-            <b className="text-orange-400">{closeTarget?.vehicle?.registrationNo}</b>?
-            The vehicle will be restored to <b className="text-green-400">Available</b>.
+            <b className="text-accent">{closeTarget?.vehicle?.registrationNo}</b>?
+            The vehicle will be restored to <b className="text-success">Available</b>.
           </p>
           <div className="flex gap-3">
             <button onClick={() => setCloseTarget(null)}
-              className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition
-                ${isDark
-                  ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+              className="btn-secondary flex-1">
               Cancel
             </button>
             <button onClick={handleClose}
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white
-                         py-2.5 rounded-xl text-sm font-medium transition
-                         flex items-center justify-center gap-2">
+              className="btn-primary bg-success flex-1">
               <CheckCircle size={14} /> Close Record
             </button>
           </div>

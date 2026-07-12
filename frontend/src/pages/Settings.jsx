@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { settingsAPI } from '../api';
+import { settingsAPI, healthAPI } from '../api';
 import { useAuthStore } from '../store/authStore';
-import Modal from '../components/ui/Modal';
+import { PageHeader, SectionHeader, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
 import {
   Settings as SettingsIcon, Shield, Plus,
@@ -11,10 +11,10 @@ import {
 const ROLES = ['FLEET_MANAGER','DISPATCHER','SAFETY_OFFICER','FINANCIAL_ANALYST'];
 
 const ROLE_COLORS = {
-  FLEET_MANAGER:     'bg-orange-500/15 text-orange-400 border-orange-500/30',
-  DISPATCHER:        'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  SAFETY_OFFICER:    'bg-green-500/15 text-green-400 border-green-500/30',
-  FINANCIAL_ANALYST: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+  FLEET_MANAGER:     'bg-accent/10 text-accent border-accent/20',
+  DISPATCHER:        'bg-blue-500/10 text-blue-500 border-blue-500/20',
+  SAFETY_OFFICER:    'bg-success/10 text-success border-success/20',
+  FINANCIAL_ANALYST: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
 };
 
 const EMPTY_USER = { name: '', email: '', password: '', role: '', region: '' };
@@ -22,8 +22,8 @@ const EMPTY_USER = { name: '', email: '', password: '', role: '', region: '' };
 function RoleBadge({ role }) {
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs
-                      font-medium border font-mono ${ROLE_COLORS[role] || 'bg-slate-500/15 text-slate-400'}`}>
-      {role?.replace('_', ' ')}
+                      font-medium border font-mono ${ROLE_COLORS[role] || 'bg-recessed text-text-sub border-b-shadow/25'}`}>
+      {role?.replaceAll('_', ' ')}
     </span>
   );
 }
@@ -36,18 +36,18 @@ function passwordStrength(pw) {
   if (/[A-Z]/.test(pw)) score++;
   if (/[0-9]/.test(pw)) score++;
   if (/[^A-Za-z0-9]/.test(pw)) score++;
-  if (score <= 1) return { score, label: 'Weak',   color: 'bg-red-500',   text: 'text-red-400' };
-  if (score <= 3) return { score, label: 'Medium',  color: 'bg-amber-500', text: 'text-amber-400' };
-  return            { score, label: 'Strong',  color: 'bg-green-500', text: 'text-green-400' };
+  if (score <= 1) return { score, label: 'Weak',   color: 'bg-danger shadow-[var(--shadow-glow-danger)]',   text: 'text-danger' };
+  if (score <= 3) return { score, label: 'Medium',  color: 'bg-warning shadow-[var(--shadow-glow-warning)]', text: 'text-warning' };
+  return            { score, label: 'Strong',  color: 'bg-success shadow-[var(--shadow-glow-success)]', text: 'text-success' };
 }
 
 function Field({ label, error, children }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-300 mb-1.5">{label}</label>
+      <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">{label}</label>
       {children}
       {error && (
-        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+        <p className="text-danger text-xs font-mono mt-1 flex items-center gap-1">
           <AlertCircle size={11} /> {error}
         </p>
       )}
@@ -68,6 +68,13 @@ export default function Settings() {
   const [showPass, setShowPass]   = useState(false);
   const [saving, setSaving]       = useState(false);
   const [appName]                 = useState('TransitOps');
+  const [isOnline, setIsOnline]   = useState(false);
+
+  useEffect(() => {
+    healthAPI.check()
+      .then(res => setIsOnline(res?.status === 'ok'))
+      .catch(() => setIsOnline(false));
+  }, []);
 
   const pw = passwordStrength(form.password);
 
@@ -87,12 +94,11 @@ export default function Settings() {
   if (!isManager) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20
-                        flex items-center justify-center">
-          <Lock size={28} className="text-red-400" />
+        <div className="w-16 h-16 rounded-2xl bg-danger/10 border border-danger/20 flex items-center justify-center">
+          <Lock size={28} className="text-danger" />
         </div>
-        <h2 className="text-xl font-bold">Access Denied</h2>
-        <p className={`text-sm ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+        <h2 className="text-xl font-bold text-text-main">Access Denied</h2>
+        <p className="text-sm text-text-sub font-mono uppercase tracking-wider text-center">
           Only Fleet Managers can access the Settings page.
         </p>
       </div>
@@ -140,184 +146,150 @@ export default function Settings() {
   };
 
   const inputCls = (err) =>
-    `w-full bg-slate-800 border rounded-xl px-3 py-2.5 text-white
-     placeholder-slate-500 text-sm focus:outline-none focus:ring-2 transition
-     ${err
-       ? 'border-red-500 focus:ring-red-500/30'
-       : 'border-slate-700 focus:ring-orange-500/30 focus:border-orange-500'}`;
+    `input ${err ? 'ring-2 ring-danger' : ''}`;
 
   const selectCls = (err) =>
-    `w-full bg-slate-800 border rounded-xl px-3 py-2.5 text-white text-sm
-     focus:outline-none focus:ring-2 transition
-     ${err
-       ? 'border-red-500 focus:ring-red-500/30'
-       : 'border-slate-700 focus:ring-orange-500/30 focus:border-orange-500'}`;
+    `select ${err ? 'ring-2 ring-danger' : ''}`;
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Settings</h1>
-          <p className={`text-sm mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Application configuration and user management
-          </p>
-        </div>
-        <div className={`flex items-center gap-2 text-xs px-3 py-1.5 rounded-full
-                          border font-medium
-          ${isDark
-            ? 'bg-orange-500/10 border-orange-500/30 text-orange-400'
-            : 'bg-orange-50 border-orange-200 text-orange-600'}`}>
-          <Shield size={12} /> Fleet Manager Only
-        </div>
-      </div>
+      <PageHeader
+        title="Settings"
+        subtitle="Application configuration and user management"
+        icon={SettingsIcon}
+        action={
+          <div className="flex items-center gap-2 text-[10px] px-3 py-1.5 rounded-full border border-accent/20 bg-accent/5 text-accent font-bold font-mono uppercase tracking-wider">
+            <Shield size={12} /> Fleet Manager Only
+          </div>
+        }
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* ── LEFT: General Settings ─────────────────────────────────── */}
-        <div className={`rounded-2xl border p-5 space-y-5
-          ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-          <h2 className="font-semibold text-base flex items-center gap-2">
-            <SettingsIcon size={16} className="text-orange-400" /> General
-          </h2>
+        <div className="rounded-2xl bg-panel shadow-[var(--shadow-card)] p-5 border border-[var(--border-color)] space-y-5">
+          <SectionHeader icon={SettingsIcon} title="General" />
 
           {/* App name */}
           <div>
-            <label className={`block text-sm font-medium mb-1.5
-              ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">
               Application Name
             </label>
-            <div className={`px-3 py-2.5 rounded-xl border text-sm font-mono
-                             font-semibold text-orange-400
-              ${isDark
-                ? 'bg-slate-800 border-slate-700'
-                : 'bg-slate-50 border-slate-200'}`}>
+            <div className="px-3 py-2.5 rounded-xl border border-b-shadow/30 bg-recessed text-sm font-mono font-bold text-accent shadow-[var(--shadow-recessed)]">
               {appName}
             </div>
           </div>
 
           {/* Theme toggle */}
           <div>
-            <label className={`block text-sm font-medium mb-3
-              ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+            <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-3">
               Theme
             </label>
             <div className="grid grid-cols-2 gap-2">
               {/* Dark option */}
               <button
                 onClick={() => !isDark && toggleTheme()}
-                className={`flex flex-col items-center gap-2 p-3 rounded-xl border
-                            text-xs font-medium transition
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition text-xs font-mono font-bold uppercase tracking-wider
                   ${isDark
-                    ? 'bg-slate-800 border-orange-500 text-orange-400'
-                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'}`}>
-                <div className="w-full h-10 rounded-lg bg-slate-900 border
-                                border-slate-700 flex items-center justify-center">
-                  <Moon size={14} className="text-slate-400" />
+                    ? 'bg-recessed border-accent text-accent shadow-[var(--shadow-recessed)]'
+                    : 'bg-chassis border-b-shadow/35 text-text-sub hover:bg-recessed'}`}
+              >
+                <div className="w-full h-10 rounded-lg bg-recessed border border-b-shadow/35 flex items-center justify-center">
+                  <Moon size={14} className={isDark ? 'text-accent' : 'text-text-sub'} />
                 </div>
                 Dark Mode
-                {isDark && <span className="text-xs text-orange-400">● Active</span>}
+                {isDark && <span className="text-[10px] text-accent">● Active</span>}
               </button>
               {/* Light option */}
               <button
                 onClick={() => isDark && toggleTheme()}
-                className={`flex flex-col items-center gap-2 p-3 rounded-xl border
-                            text-xs font-medium transition
+                className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition text-xs font-mono font-bold uppercase tracking-wider
                   ${!isDark
-                    ? 'bg-slate-50 border-orange-500 text-orange-600'
-                    : 'bg-slate-800 border-slate-700 text-slate-500 hover:border-slate-600'}`}>
-                <div className="w-full h-10 rounded-lg bg-white border border-slate-200
-                                flex items-center justify-center">
-                  <Sun size={14} className="text-amber-500" />
+                    ? 'bg-recessed border-accent text-accent shadow-[var(--shadow-recessed)]'
+                    : 'bg-chassis border-b-shadow/35 text-text-sub hover:bg-recessed'}`}
+              >
+                <div className="w-full h-10 rounded-lg bg-recessed border border-b-shadow/35 flex items-center justify-center">
+                  <Sun size={14} className={!isDark ? 'text-accent' : 'text-text-sub'} />
                 </div>
                 Light Mode
-                {!isDark && <span className="text-xs text-orange-500">● Active</span>}
+                {!isDark && <span className="text-[10px] text-accent">● Active</span>}
               </button>
             </div>
           </div>
 
           {/* Version info */}
-          <div className={`text-xs space-y-1 pt-2 border-t
-            ${isDark ? 'border-slate-800 text-slate-500' : 'border-slate-100 text-slate-400'}`}>
+          <div className="text-xs space-y-1 pt-2 border-t border-b-shadow/20 text-text-sub font-mono uppercase tracking-wider text-[9px] font-bold">
             <div className="flex justify-between">
               <span>Version</span>
-              <span className="font-mono">v1.0.0</span>
+              <span>v1.0.0</span>
             </div>
             <div className="flex justify-between">
               <span>Backend</span>
-              <span className="font-mono text-green-400">Online</span>
+              <span className={isOnline ? 'text-success' : 'text-danger'}>
+                {isOnline ? 'Online' : 'Offline'}
+              </span>
             </div>
             <div className="flex justify-between">
               <span>AI</span>
-              <span className="font-mono text-green-400">Claude 3</span>
+              <span className="text-success">Groq LLaMA</span>
             </div>
           </div>
         </div>
 
         {/* ── RIGHT: RBAC User Table ─────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-base flex items-center gap-2">
-              <Shield size={16} className="text-blue-400" />
-              User Management
-              <span className="text-xs font-mono text-slate-500">({users.length})</span>
-            </h2>
-            <button
-              onClick={() => { setForm(EMPTY_USER); setErrors({}); setModalOpen(true); }}
-              className="flex items-center gap-1.5 bg-orange-500 hover:bg-orange-600
-                         text-white px-3 py-2 rounded-xl text-xs font-medium
-                         transition shadow-md shadow-orange-500/20">
-              <Plus size={13} /> Add User
-            </button>
-          </div>
+          <SectionHeader
+            icon={Shield}
+            title="User Management"
+            badge={users.length}
+            action={
+              <button
+                onClick={() => { setForm(EMPTY_USER); setErrors({}); setModalOpen(true); }}
+                className="btn-primary py-1.5 px-3 text-xs"
+              >
+                <Plus size={13} /> Add User
+              </button>
+            }
+          />
 
           {loading ? (
-            <div className="animate-pulse space-y-2">
+            <div className="space-y-2">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className={`h-14 rounded-xl
-                  ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+                <div key={i} className="h-14 rounded-xl bg-recessed animate-pulse shadow-[var(--shadow-recessed)]" />
               ))}
             </div>
           ) : (
-            <div className={`rounded-2xl border overflow-hidden
-              ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            <div className="rounded-2xl bg-panel shadow-[var(--shadow-card)] p-1 border border-[var(--border-color)] overflow-hidden">
               {/* Desktop Table */}
               <div className="hidden sm:block overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full border-collapse">
                   <thead>
-                    <tr className={`text-xs uppercase tracking-wider font-semibold
-                      ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-50 text-slate-500'}`}>
+                    <tr className="bg-recessed/30">
                       {['Name','Email','Role','Status','Action']
-                        .map(h => <th key={h} className="px-4 py-3 text-left">{h}</th>)}
+                        .map(h => <th key={h} className="table-header font-mono text-xs font-bold uppercase tracking-wider text-text-sub border-b border-b-shadow/50">{h}</th>)}
                     </tr>
                   </thead>
-                  <tbody className={`divide-y ${isDark ? 'divide-slate-800' : 'divide-slate-100'}`}>
+                  <tbody>
                     {users.map(u => (
                       <tr key={u.id}
-                        className={`transition-colors
-                          ${!u.isActive ? 'opacity-50' : ''}
-                          ${isDark ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}`}>
-                        <td className="px-4 py-3 font-medium text-sm">{u.name}</td>
-                        <td className={`px-4 py-3 text-xs font-mono
-                          ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        className={`table-row ${!u.isActive ? 'opacity-50' : ''}`}>
+                        <td className="table-cell font-bold text-sm text-text-main border-b border-b-shadow/20">{u.name}</td>
+                        <td className="table-cell text-xs font-mono text-text-sub border-b border-b-shadow/20">
                           {u.email}
                         </td>
-                        <td className="px-4 py-3"><RoleBadge role={u.role} /></td>
-                        <td className="px-4 py-3">
-                          <span className={`text-xs font-medium
-                            ${u.isActive ? 'text-green-400' : 'text-slate-500'}`}>
+                        <td className="table-cell border-b border-b-shadow/20"><RoleBadge role={u.role} /></td>
+                        <td className="table-cell border-b border-b-shadow/20">
+                          <span className={`text-xs font-bold font-mono
+                            ${u.isActive ? 'text-success' : 'text-text-sub'}`}>
                             {u.isActive ? '● Active' : '○ Inactive'}
                           </span>
                         </td>
-                        <td className="px-4 py-3">
+                        <td className="table-cell border-b border-b-shadow/20">
                           {u.id !== user?.id && (
                             <button
                               onClick={() => handleToggleActive(u)}
-                              className={`text-xs px-3 py-1.5 rounded-lg border
-                                          font-medium transition
-                                ${u.isActive
-                                  ? 'border-red-500/30 text-red-400 hover:bg-red-500/10'
-                                  : 'border-green-500/30 text-green-400 hover:bg-green-500/10'}`}>
+                              className={`btn-ghost text-xs px-3 py-1.5 ${u.isActive ? 'text-danger' : 'text-success'}`}
+                            >
                               {u.isActive ? 'Deactivate' : 'Activate'}
                             </button>
                           )}
@@ -329,28 +301,26 @@ export default function Settings() {
               </div>
 
               {/* Mobile list */}
-              <div className="sm:hidden divide-y divide-slate-800">
+              <div className="sm:hidden divide-y divide-b-shadow/20">
                 {users.map(u => (
                   <div key={u.id}
                     className={`p-4 ${!u.isActive ? 'opacity-50' : ''}`}>
                     <div className="flex items-start justify-between mb-1">
                       <div>
-                        <p className="font-medium text-sm">{u.name}</p>
-                        <p className="text-xs font-mono text-slate-400">{u.email}</p>
+                        <p className="font-bold text-sm text-text-main">{u.name}</p>
+                        <p className="text-xs font-mono text-text-sub">{u.email}</p>
                       </div>
                       <RoleBadge role={u.role} />
                     </div>
                     <div className="flex items-center justify-between mt-2">
-                      <span className={`text-xs ${u.isActive ? 'text-green-400' : 'text-slate-500'}`}>
+                      <span className={`text-xs font-mono font-bold ${u.isActive ? 'text-success' : 'text-text-sub'}`}>
                         {u.isActive ? '● Active' : '○ Inactive'}
                       </span>
                       {u.id !== user?.id && (
                         <button
                           onClick={() => handleToggleActive(u)}
-                          className={`text-xs px-3 py-1.5 rounded-lg border font-medium transition
-                            ${u.isActive
-                              ? 'border-red-500/30 text-red-400 hover:bg-red-500/10'
-                              : 'border-green-500/30 text-green-400 hover:bg-green-500/10'}`}>
+                          className={`btn-ghost text-xs px-3 py-1.5 ${u.isActive ? 'text-danger' : 'text-success'}`}
+                        >
                           {u.isActive ? 'Deactivate' : 'Activate'}
                         </button>
                       )}
@@ -362,11 +332,8 @@ export default function Settings() {
           )}
 
           {/* Info note */}
-          <div className={`flex items-start gap-2 px-4 py-3 rounded-xl border text-xs
-            ${isDark
-              ? 'bg-slate-900 border-slate-800 text-slate-500'
-              : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
-            <Shield size={14} className="shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2 px-4 py-3 rounded-xl border border-warning/20 bg-warning/5 text-xs text-text-main font-mono uppercase tracking-wider">
+            <Shield size={14} className="shrink-0 mt-0.5 text-warning" />
             <span>
               Only Fleet Managers can access Settings and manage users.
               Deactivated users cannot log in.
@@ -414,8 +381,7 @@ export default function Settings() {
                 className={`pr-10 ${inputCls(errors.password)}`}
               />
               <button type="button" onClick={() => setShowPass(s => !s)}
-                className="absolute right-3 top-1/2 -translate-y-1/2
-                           text-slate-500 hover:text-slate-300">
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-sub hover:text-text-main">
                 {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
@@ -426,10 +392,10 @@ export default function Settings() {
                   {[1,2,3,4,5].map(i => (
                     <div key={i}
                       className={`h-1 flex-1 rounded-full transition-all
-                        ${i <= pw.score ? pw.color : 'bg-slate-700'}`} />
+                        ${i <= pw.score ? pw.color : 'bg-recessed'}`} />
                   ))}
                 </div>
-                <p className={`text-xs font-medium ${pw.text}`}>{pw.label}</p>
+                <p className={`text-xs font-mono font-bold uppercase tracking-wider ${pw.text}`}>{pw.label}</p>
               </div>
             )}
           </Field>
@@ -456,18 +422,12 @@ export default function Settings() {
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setModalOpen(false)}
-              className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition
-                ${isDark
-                  ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+              className="btn-secondary flex-1">
               Cancel
             </button>
             <button type="submit" disabled={saving}
-              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white
-                         py-2.5 rounded-xl text-sm font-medium transition
-                         flex items-center justify-center gap-2 disabled:opacity-50">
-              {saving && <div className="w-3.5 h-3.5 border-2 border-white/30
-                                         border-t-white rounded-full animate-spin" />}
+              className="btn-primary bg-accent flex-1">
+              {saving && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
               Create User
             </button>
           </div>

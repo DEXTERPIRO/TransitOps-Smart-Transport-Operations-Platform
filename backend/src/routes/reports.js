@@ -1,9 +1,8 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const { verifyToken, requireRoles } = require('../middleware/auth');
 const PDFDocument = require('pdfkit');
 const { Parser } = require('json2csv');
-const prisma = new PrismaClient();
 
 router.get('/analytics', verifyToken, async (req, res) => {
   try {
@@ -80,20 +79,29 @@ router.get('/analytics', verifyToken, async (req, res) => {
       const totalOperationalCost =
         v.fuelCost + v.maintenanceCost + v.otherExpenses;
       const fuelEfficiency =
-        v.totalFuel > 0 ? (v.totalDistance / v.totalFuel).toFixed(2) : 0;
+        v.totalFuel > 0 ? Number((v.totalDistance / v.totalFuel).toFixed(2)) : 0;
       const roi = v.acquisitionCost > 0
-        ? (((v.totalRevenue - totalOperationalCost)
-            / v.acquisitionCost) * 100).toFixed(2)
+        ? Number((((v.totalRevenue - totalOperationalCost)
+            / v.acquisitionCost) * 100).toFixed(2))
         : 0;
-      return { ...v, totalOperationalCost, fuelEfficiency, roi };
+      return {
+        ...v,
+        totalOperationalCost,
+        fuelEfficiency,
+        roi,
+        distance: v.totalDistance,
+        fuelUsed: v.totalFuel,
+        revenue: v.totalRevenue,
+        opCost: totalOperationalCost
+      };
     });
 
     // Monthly revenue trend
     const monthlyRevenue = await prisma.$queryRaw`
       SELECT 
         DATE_TRUNC('month', "completedAt") as month,
-        SUM(revenue) as revenue,
-        COUNT(*) as trips
+        CAST(SUM(revenue) AS DOUBLE PRECISION) as revenue,
+        CAST(COUNT(*) AS INTEGER) as trips
       FROM "Trip"
       WHERE status = 'COMPLETED' AND "completedAt" IS NOT NULL
       GROUP BY DATE_TRUNC('month', "completedAt")
@@ -112,6 +120,16 @@ router.get('/analytics', verifyToken, async (req, res) => {
       ? Math.round((onTripVehicles / totalVehicles) * 100)
       : 0;
 
+    const totalOpCost = statsArray.reduce((s, v) => s + v.totalOperationalCost, 0);
+    const validEfficiencies = statsArray.filter(v => v.fuelEfficiency > 0);
+    const avgFuelEfficiency = validEfficiencies.length > 0
+      ? validEfficiencies.reduce((s, v) => s + parseFloat(v.fuelEfficiency), 0) / validEfficiencies.length
+      : 0;
+    const validROIs = statsArray.filter(v => parseFloat(v.roi) !== 0);
+    const avgROI = validROIs.length > 0
+      ? validROIs.reduce((s, v) => s + parseFloat(v.roi), 0) / validROIs.length
+      : 0;
+
     res.json({
       vehicleStats: statsArray,
       monthlyRevenue,
@@ -121,6 +139,10 @@ router.get('/analytics', verifyToken, async (req, res) => {
         totalRevenue: statsArray.reduce((s, v) => s + v.totalRevenue, 0),
         totalFuelCost: statsArray.reduce((s, v) => s + v.fuelCost, 0),
         totalMaintenanceCost: statsArray.reduce((s, v) => s + v.maintenanceCost, 0),
+        totalOpCost,
+        avgFuelEfficiency,
+        avgROI,
+        fleetUtilization
       }
     });
   } catch (e) {
@@ -133,13 +155,23 @@ router.get('/analytics', verifyToken, async (req, res) => {
 router.get('/export/csv', verifyToken,
   requireRoles('FLEET_MANAGER', 'FINANCIAL_ANALYST'), async (req, res) => {
   try {
-    const { type } = req.query;
+    const { type, from, to, vehicleId } = req.query;
 
     let data = [];
     let filename = 'report';
 
     if (type === 'trips') {
+      const tripWhere = {};
+      const dateFilter = {};
+      if (from) dateFilter.gte = new Date(from);
+      if (to) dateFilter.lte = new Date(to);
+      if (dateFilter.gte || dateFilter.lte) {
+        tripWhere.createdAt = dateFilter;
+      }
+      if (vehicleId) tripWhere.vehicleId = vehicleId;
+
       const trips = await prisma.trip.findMany({
+        where: tripWhere,
         include: { vehicle: true, driver: true }
       });
       data = trips.map(t => ({
@@ -157,8 +189,10 @@ router.get('/export/csv', verifyToken,
       }));
       filename = 'trips-report';
     } else if (type === 'vehicles') {
+      const vehicleWhere = { isActive: true };
+      if (vehicleId) vehicleWhere.id = vehicleId;
       const vehicles = await prisma.vehicle.findMany({
-        where: { isActive: true }
+        where: vehicleWhere
       });
       data = vehicles.map(v => ({
         'Registration': v.registrationNo,
@@ -171,6 +205,52 @@ router.get('/export/csv', verifyToken,
         'Region': v.region || ''
       }));
       filename = 'vehicles-report';
+    } else if (type === 'fuel') {
+      const fuelWhere = {};
+      const dateFilter = {};
+      if (from) dateFilter.gte = new Date(from);
+      if (to) dateFilter.lte = new Date(to);
+      if (dateFilter.gte || dateFilter.lte) {
+        fuelWhere.date = dateFilter;
+      }
+      if (vehicleId) fuelWhere.vehicleId = vehicleId;
+
+      const fuelLogs = await prisma.fuelLog.findMany({
+        where: fuelWhere,
+        include: { vehicle: true }
+      });
+      data = fuelLogs.map(f => ({
+        'Vehicle': f.vehicle.registrationNo,
+        'Liters': f.liters,
+        'Cost Per Liter': f.costPerL,
+        'Total Cost': f.totalCost,
+        'Odometer': f.odometer,
+        'Station': f.station || '',
+        'Date': f.date.toLocaleDateString()
+      }));
+      filename = 'fuel-report';
+    } else if (type === 'expenses') {
+      const expenseWhere = {};
+      const dateFilter = {};
+      if (from) dateFilter.gte = new Date(from);
+      if (to) dateFilter.lte = new Date(to);
+      if (dateFilter.gte || dateFilter.lte) {
+        expenseWhere.date = dateFilter;
+      }
+      if (vehicleId) expenseWhere.vehicleId = vehicleId;
+
+      const expenses = await prisma.expense.findMany({
+        where: expenseWhere,
+        include: { vehicle: true }
+      });
+      data = expenses.map(e => ({
+        'Vehicle': e.vehicle.registrationNo,
+        'Type': e.type,
+        'Amount': e.amount,
+        'Description': e.description || '',
+        'Date': e.date.toLocaleDateString()
+      }));
+      filename = 'expenses-report';
     }
 
     const parser = new Parser();
@@ -188,12 +268,28 @@ router.get('/export/csv', verifyToken,
 router.get('/export/pdf', verifyToken,
   requireRoles('FLEET_MANAGER', 'FINANCIAL_ANALYST'), async (req, res) => {
   try {
+    const { from, to, vehicleId } = req.query;
+
+    const vehicleWhere = { isActive: true };
+    if (vehicleId) vehicleWhere.id = vehicleId;
+
     const vehicles = await prisma.vehicle.findMany({
-      where: { isActive: true }
+      where: vehicleWhere
     });
+
+    const tripWhere = { status: 'COMPLETED' };
+    const dateFilter = {};
+    if (from) dateFilter.gte = new Date(from);
+    if (to) dateFilter.lte = new Date(to);
+    if (dateFilter.gte || dateFilter.lte) {
+      tripWhere.completedAt = dateFilter;
+    }
+    if (vehicleId) tripWhere.vehicleId = vehicleId;
+
     const trips = await prisma.trip.findMany({
-      where: { status: 'COMPLETED' },
+      where: tripWhere,
       include: { vehicle: true, driver: true },
+      orderBy: { completedAt: 'desc' },
       take: 20
     });
 
@@ -229,7 +325,7 @@ router.get('/export/pdf', verifyToken,
         .text(`${t.tripCode}`, 55, doc.y - 12)
         .text(`${t.source} → ${t.destination}`, 120, doc.y - doc.currentLineHeight())
         .text(`${t.vehicle.registrationNo}`, 320, doc.y - doc.currentLineHeight())
-        .text(`₹${t.revenue || 0}`, 440, doc.y - doc.currentLineHeight());
+        .text(`Rs. ${t.revenue || 0}`, 440, doc.y - doc.currentLineHeight());
       doc.moveDown(0.3);
     });
 

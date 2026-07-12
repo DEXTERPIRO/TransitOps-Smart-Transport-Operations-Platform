@@ -1,8 +1,9 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const { verifyToken } = require('../middleware/auth');
-const Anthropic = require('@anthropic-ai/sdk');
-const prisma = new PrismaClient();
+const Groq = require('groq-sdk');
+
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 router.post('/chat', verifyToken, async (req, res) => {
   try {
@@ -28,37 +29,35 @@ router.post('/chat', verifyToken, async (req, res) => {
       select: { name: true, licenseExpiry: true }
     });
 
-    const client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY
-    });
+    const systemPrompt = `You are TransitOps AI Assistant, an expert in fleet and transport operations management.
 
-    const systemPrompt = `You are TransitOps AI Assistant, an expert in 
-fleet and transport operations management.
-
-Current fleet data:
-- Total vehicles: ${vehicles}
-- Total drivers: ${drivers}  
+Current live fleet data:
+- Total active vehicles: ${vehicles}
+- Total active drivers: ${drivers}
 - Active trips right now: ${trips}
-- Vehicles in maintenance: ${maintenance}
-- Drivers with expiring licenses (30 days): ${expiringDrivers.length}
-${expiringDrivers.map(d => `  • ${d.name}: expires ${new Date(d.licenseExpiry).toLocaleDateString()}`).join('\n')}
+- Vehicles currently in maintenance: ${maintenance}
+- Drivers with licenses expiring within 30 days: ${expiringDrivers.length}
+${expiringDrivers.map(d => `  • ${d.name}: expires ${new Date(d.licenseExpiry).toLocaleDateString('en-IN')}`).join('\n')}
 
-Answer questions about fleet operations, maintenance scheduling, 
-driver compliance, route optimization, and cost efficiency.
-Be concise, practical, and specific to the data above when relevant.`;
+Answer questions about fleet operations, maintenance scheduling, driver compliance, route optimization, and cost efficiency.
+Be concise, practical, and specific to the data above when relevant. Keep answers under 200 words.`;
 
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
+    const completion = await groq.chat.completions.create({
+      model: 'llama-3.3-70b-versatile',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: message }
+      ],
       max_tokens: 500,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: message }]
+      temperature: 0.7,
     });
 
-    res.json({ reply: response.content[0].text });
+    const reply = completion.choices[0]?.message?.content || 'No response generated.';
+    res.json({ reply });
   } catch (e) {
-    console.error('AI error:', e);
+    console.error('Groq AI error:', e);
     res.status(500).json({
-      error: 'AI assistant unavailable. Check ANTHROPIC_API_KEY in .env'
+      error: 'AI assistant unavailable. Check GROQ_API_KEY in .env'
     });
   }
 });

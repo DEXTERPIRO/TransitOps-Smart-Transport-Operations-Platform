@@ -1,7 +1,6 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const { verifyToken, requireRoles } = require('../middleware/auth');
-const prisma = new PrismaClient();
 
 // GET all vehicles with filters
 router.get('/', verifyToken, async (req, res) => {

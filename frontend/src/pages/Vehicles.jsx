@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { vehiclesAPI } from '../api';
 import { useAuthStore } from '../store/authStore';
-import Modal from '../components/ui/Modal';
-import StatusBadge from '../components/ui/StatusBadge';
+import { PageHeader, SectionHeader, EmptyState, StatusBadge, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
 import {
   Truck, Search, Plus, Pencil, Trash2,
@@ -37,10 +36,10 @@ function validate(form) {
 function Field({ label, error, children }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-300 mb-1.5">{label}</label>
+      <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">{label}</label>
       {children}
       {error && (
-        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+        <p className="text-danger text-xs font-mono mt-1 flex items-center gap-1">
           <AlertCircle size={11} /> {error}
         </p>
       )}
@@ -148,58 +147,41 @@ export default function Vehicles() {
   };
 
   const inputCls = (err) =>
-    `w-full bg-slate-800 border rounded-xl px-3 py-2.5 text-white
-     placeholder-slate-500 text-sm focus:outline-none focus:ring-2 transition
-     ${err
-       ? 'border-red-500 focus:ring-red-500/30'
-       : 'border-slate-700 focus:ring-orange-500/30 focus:border-orange-500'}`;
+    `input ${err ? 'ring-2 ring-danger' : ''}`;
 
   const selectCls = (err) =>
-    `w-full bg-slate-800 border rounded-xl px-3 py-2.5 text-white text-sm
-     focus:outline-none focus:ring-2 transition
-     ${err
-       ? 'border-red-500 focus:ring-red-500/30'
-       : 'border-slate-700 focus:ring-orange-500/30 focus:border-orange-500'}`;
+    `select ${err ? 'ring-2 ring-danger' : ''}`;
 
   const rowOpacity = (v) =>
     v.status === 'RETIRED' || v.status === 'IN_SHOP' ? 'opacity-70' : '';
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Fleet Management</h1>
-          <p className={`text-sm mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-            {vehicles.length} vehicle{vehicles.length !== 1 ? 's' : ''} in fleet
-          </p>
-        </div>
-        {isManager && (
-          <button
-            onClick={openAdd}
-            className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600
-                       text-white px-4 py-2.5 rounded-xl text-sm font-medium
-                       transition-all shadow-lg shadow-orange-500/20"
-          >
-            <Plus size={16} /> Add Vehicle
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Fleet Management"
+        subtitle={`${vehicles.length} vehicle${vehicles.length !== 1 ? 's' : ''} in fleet`}
+        icon={Truck}
+        action={
+          isManager && (
+            <button
+              onClick={openAdd}
+              className="btn-primary"
+            >
+              <Plus size={16} /> Add Vehicle
+            </button>
+          )
+        }
+      />
 
       {/* Search + Filters */}
-      <div className={`flex flex-col sm:flex-row gap-3 p-4 rounded-2xl border
-        ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+      <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-2xl bg-panel shadow-[var(--shadow-card)] border border-[var(--border-color)]">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-sub" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Search registration, name..."
-            className={`w-full pl-9 pr-4 py-2.5 rounded-xl border text-sm
-              focus:outline-none focus:ring-2 focus:ring-orange-500/30
-              ${isDark
-                ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500'
-                : 'bg-slate-50 border-slate-200 text-slate-900'}`}
+            className="input pl-9"
           />
         </div>
         {[
@@ -211,11 +193,7 @@ export default function Vehicles() {
             key={f.key}
             value={filters[f.key]}
             onChange={e => setFilters(prev => ({ ...prev, [f.key]: e.target.value }))}
-            className={`text-sm px-3 py-2.5 rounded-xl border focus:outline-none
-              focus:ring-2 focus:ring-orange-500/30
-              ${isDark
-                ? 'bg-slate-800 border-slate-700 text-slate-300'
-                : 'bg-slate-50 border-slate-200 text-slate-700'}`}
+            className="select w-auto py-1.5 px-3"
           >
             <option value="">{f.label}</option>
             {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
@@ -225,74 +203,62 @@ export default function Vehicles() {
 
       {/* Table / Skeleton / Empty */}
       {loading ? (
-        <div className="space-y-2 animate-pulse">
+        <div className="space-y-2">
           {[...Array(6)].map((_, i) => (
-            <div key={i} className={`h-14 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+            <div key={i} className="h-14 rounded-xl bg-recessed animate-pulse shadow-[var(--shadow-recessed)]" />
           ))}
         </div>
       ) : vehicles.length === 0 ? (
-        <div className={`flex flex-col items-center justify-center py-20 rounded-2xl border
-          ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-          <PackageOpen size={48} className="text-slate-600 mb-3" />
-          <p className="text-slate-500 font-medium">No vehicles found</p>
-          <p className="text-slate-600 text-sm mt-1">
-            {search || Object.values(filters).some(Boolean)
+        <EmptyState
+          icon={PackageOpen}
+          title="No vehicles found"
+          description={
+            search || Object.values(filters).some(Boolean)
               ? 'Try adjusting your filters'
-              : 'Add your first vehicle to get started'}
-          </p>
-        </div>
+              : 'Add your first vehicle to get started'
+          }
+        />
       ) : (
         <>
           {/* Desktop Table */}
-          <div className={`hidden md:block rounded-2xl border overflow-hidden
-            ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-            <table className="w-full text-sm">
+          <div className="hidden md:block rounded-2xl bg-panel shadow-[var(--shadow-card)] p-1 border border-[var(--border-color)] overflow-hidden">
+            <table className="w-full border-collapse">
               <thead>
-                <tr className={`text-xs uppercase tracking-wider font-semibold
-                  ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-50 text-slate-500'}`}>
+                <tr className="bg-recessed/30">
                   {['Reg No', 'Name', 'Type', 'Capacity', 'Odometer', 'Acq. Cost', 'Status', 'Actions']
-                    .map(h => <th key={h} className="px-4 py-3 text-left">{h}</th>)}
+                    .map(h => <th key={h} className="table-header font-mono text-xs font-bold uppercase tracking-wider text-text-sub border-b border-b-shadow/50">{h}</th>)}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody>
                 {vehicles.map(v => (
                   <tr key={v.id}
-                    className={`transition-colors ${rowOpacity(v)}
-                      ${isDark ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50'}`}>
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-orange-400 font-semibold text-xs">
-                        {v.registrationNo}
-                      </span>
+                    className={`table-row ${rowOpacity(v)}`}>
+                    <td className="table-cell font-mono text-sm text-accent border-b border-b-shadow/20">
+                      {v.registrationNo}
                     </td>
-                    <td className="px-4 py-3 font-medium">{v.name}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-mono px-2 py-0.5 rounded-lg
-                        ${isDark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'}`}>
-                        {v.type}
-                      </span>
+                    <td className="table-cell font-medium text-text-main border-b border-b-shadow/20">{v.name}</td>
+                    <td className="table-cell font-mono text-xs text-text-main border-b border-b-shadow/20">
+                      {v.type}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs">{v.maxLoadCapacity} kg</td>
-                    <td className="px-4 py-3 font-mono text-xs">{v.odometer?.toLocaleString()} km</td>
-                    <td className="px-4 py-3 font-mono text-xs">
+                    <td className="table-cell font-mono text-xs text-text-main border-b border-b-shadow/20">{v.maxLoadCapacity} kg</td>
+                    <td className="table-cell font-mono text-xs text-text-main border-b border-b-shadow/20">{v.odometer?.toLocaleString()} km</td>
+                    <td className="table-cell font-mono text-xs text-text-main border-b border-b-shadow/20">
                       ₹{v.acquisitionCost?.toLocaleString()}
                     </td>
-                    <td className="px-4 py-3"><StatusBadge status={v.status} /></td>
-                    <td className="px-4 py-3">
+                    <td className="table-cell border-b border-b-shadow/20"><StatusBadge status={v.status} /></td>
+                    <td className="table-cell border-b border-b-shadow/20">
                       {isManager && (
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => openEdit(v)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-400
-                                       hover:bg-blue-500/10 transition"
+                            className="btn-ghost p-1.5"
                           >
                             <Pencil size={14} />
                           </button>
                           <button
                             onClick={() => setDeleteTarget(v)}
                             disabled={v.status === 'ON_TRIP'}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-400
-                                       hover:bg-red-500/10 transition disabled:opacity-30
-                                       disabled:cursor-not-allowed"
+                            className="btn-ghost p-1.5 text-danger disabled:opacity-30 disabled:pointer-events-none"
                           >
                             <Trash2 size={14} />
                           </button>
@@ -309,36 +275,31 @@ export default function Vehicles() {
           <div className="md:hidden space-y-3">
             {vehicles.map(v => (
               <div key={v.id}
-                className={`rounded-2xl border p-4 ${rowOpacity(v)}
-                  ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                className={`card ${rowOpacity(v)}`}>
                 <div className="flex items-start justify-between mb-2">
                   <div>
-                    <span className="font-mono text-orange-400 font-bold text-sm">
+                    <span className="font-mono text-accent font-bold text-sm">
                       {v.registrationNo}
                     </span>
-                    <p className="font-medium mt-0.5">{v.name}</p>
+                    <p className="font-medium mt-0.5 text-text-main">{v.name}</p>
                   </div>
                   <StatusBadge status={v.status} />
                 </div>
-                <div className={`grid grid-cols-2 gap-2 text-xs mt-3
-                  ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  <span>Type: <b className="text-slate-300">{v.type}</b></span>
-                  <span>Load: <b className="text-slate-300">{v.maxLoadCapacity} kg</b></span>
-                  <span>Odo: <b className="text-slate-300">{v.odometer?.toLocaleString()} km</b></span>
-                  <span>Cost: <b className="text-slate-300">₹{v.acquisitionCost?.toLocaleString()}</b></span>
+                <div className="grid grid-cols-2 gap-2 text-xs mt-3 text-text-sub font-mono">
+                  <span>Type: <b className="text-text-main">{v.type}</b></span>
+                  <span>Load: <b className="text-text-main">{v.maxLoadCapacity} kg</b></span>
+                  <span>Odo: <b className="text-text-main">{v.odometer?.toLocaleString()} km</b></span>
+                  <span>Cost: <b className="text-text-main">₹{v.acquisitionCost?.toLocaleString()}</b></span>
                 </div>
                 {isManager && (
-                  <div className="flex gap-2 mt-3 pt-3 border-t border-slate-800">
+                  <div className="flex gap-2 mt-3 pt-3 border-t border-b-shadow/30">
                     <button onClick={() => openEdit(v)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2
-                                 text-xs text-blue-400 hover:bg-blue-500/10 rounded-lg transition">
+                      className="btn-ghost flex-1 py-1.5 justify-center">
                       <Pencil size={13} /> Edit
                     </button>
                     <button onClick={() => setDeleteTarget(v)}
                       disabled={v.status === 'ON_TRIP'}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2
-                                 text-xs text-red-400 hover:bg-red-500/10 rounded-lg
-                                 transition disabled:opacity-30">
+                      className="btn-ghost flex-1 py-1.5 justify-center text-danger disabled:opacity-30 disabled:pointer-events-none">
                       <Trash2 size={13} /> Delete
                     </button>
                   </div>
@@ -427,23 +388,17 @@ export default function Vehicles() {
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition
-                ${isDark
-                  ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+              className="btn-secondary flex-1"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex-1 bg-orange-500 hover:bg-orange-600 text-white
-                         py-2.5 rounded-xl text-sm font-medium transition
-                         flex items-center justify-center gap-2 disabled:opacity-50"
+              className="btn-primary flex-1 disabled:opacity-50"
             >
               {saving && (
-                <div className="w-3.5 h-3.5 border-2 border-white/30
-                                border-t-white rounded-full animate-spin" />
+                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
               {editVehicle ? 'Save Changes' : 'Add Vehicle'}
             </button>
@@ -458,9 +413,9 @@ export default function Vehicles() {
         title="Delete Vehicle"
         size="sm"
       >
-        <p className={`text-sm mb-5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+        <p className="text-sm mb-5 text-text-main">
           Are you sure you want to remove{' '}
-          <span className="font-mono text-orange-400 font-bold">
+          <span className="font-mono text-accent font-bold">
             {deleteTarget?.registrationNo}
           </span>{' '}
           from the fleet? This action cannot be undone.
@@ -468,17 +423,13 @@ export default function Vehicles() {
         <div className="flex gap-3">
           <button
             onClick={() => setDeleteTarget(null)}
-            className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition
-              ${isDark
-                ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
-                : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+            className="btn-secondary flex-1"
           >
             Cancel
           </button>
           <button
             onClick={handleDelete}
-            className="flex-1 bg-red-500 hover:bg-red-600 text-white
-                       py-2.5 rounded-xl text-sm font-medium transition"
+            className="btn-danger flex-1"
           >
             Delete
           </button>

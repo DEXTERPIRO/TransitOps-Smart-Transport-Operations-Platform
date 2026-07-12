@@ -2,8 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { tripsAPI, vehiclesAPI, driversAPI } from '../api';
 import { useAuthStore } from '../store/authStore';
-import Modal from '../components/ui/Modal';
-import StatusBadge from '../components/ui/StatusBadge';
+import { PageHeader, SectionHeader, StatusBadge, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
 import {
   Route, Truck, Users, Package, Send, CheckCircle,
@@ -13,10 +12,10 @@ import {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const COLUMNS = [
-  { status: 'DRAFT',      label: 'Draft',      color: 'text-slate-400',  border: 'border-slate-700' },
-  { status: 'DISPATCHED', label: 'Dispatched',  color: 'text-blue-400',   border: 'border-blue-500/40' },
-  { status: 'COMPLETED',  label: 'Completed',   color: 'text-green-400',  border: 'border-green-500/40' },
-  { status: 'CANCELLED',  label: 'Cancelled',   color: 'text-red-400',    border: 'border-red-500/40' },
+  { status: 'DRAFT',      label: 'Draft',      color: 'text-text-sub',  border: 'border-b-shadow/30' },
+  { status: 'DISPATCHED', label: 'Dispatched',  color: 'text-blue-500 dark:text-blue-400',   border: 'border-blue-500/40' },
+  { status: 'COMPLETED',  label: 'Completed',   color: 'text-success',  border: 'border-success/40' },
+  { status: 'CANCELLED',  label: 'Cancelled',   color: 'text-danger',    border: 'border-danger/40' },
 ];
 
 const EMPTY_FORM = {
@@ -31,10 +30,10 @@ const EMPTY_COMPLETE = { endOdometer: '', fuelConsumed: '', actualDistance: '' }
 function Field({ label, error, children }) {
   return (
     <div>
-      <label className="block text-xs font-medium text-slate-400 mb-1">{label}</label>
+      <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">{label}</label>
       {children}
       {error && (
-        <p className="text-red-400 text-xs mt-1 flex items-center gap-1">
+        <p className="text-danger text-xs font-mono mt-1 flex items-center gap-1">
           <AlertCircle size={10} /> {error}
         </p>
       )}
@@ -67,53 +66,47 @@ function validateForm(form, vehicles) {
 // ─── Trip Card ────────────────────────────────────────────────────────────────
 function TripCard({ trip, isDark, onDispatch, onComplete, onCancel, onView }) {
   return (
-    <div className={`rounded-xl border p-3 text-sm transition-all
-      hover:shadow-md hover:-translate-y-0.5
-      ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200 shadow-sm'}`}>
+    <div className="card text-sm">
 
       {/* Trip code + route */}
       <div className="flex items-start justify-between mb-2">
-        <span className="font-mono text-orange-400 font-bold text-xs">
+        <span className="font-mono text-accent font-bold text-xs">
           {trip.tripCode}
         </span>
         <StatusBadge status={trip.status} />
       </div>
 
-      <div className="flex items-center gap-1.5 font-medium text-xs mb-2 truncate">
+      <div className="flex items-center gap-1.5 font-medium text-xs mb-2 truncate text-text-main font-mono">
         <span className="truncate">{trip.source}</span>
-        <ArrowRight size={12} className="shrink-0 text-slate-500" />
+        <ArrowRight size={12} className="shrink-0 text-text-sub" />
         <span className="truncate">{trip.destination}</span>
       </div>
 
-      <div className={`text-xs space-y-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+      <div className="text-xs space-y-1 text-text-sub font-mono">
         <div className="flex items-center gap-1.5">
-          <Truck size={11} />
-          <span className="font-mono">{trip.vehicle?.registrationNo}</span>
+          <Truck size={11} className="text-text-sub" />
+          <span>{trip.vehicle?.registrationNo}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Users size={11} />
+          <Users size={11} className="text-text-sub" />
           <span>{trip.driver?.name}</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <Package size={11} />
+          <Package size={11} className="text-text-sub" />
           <span>{trip.cargoWeight} kg</span>
         </div>
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-1.5 mt-3 pt-2 border-t border-slate-700/50">
+      <div className="flex gap-1.5 mt-3 pt-2 border-t border-b-shadow/30">
         {trip.status === 'DRAFT' && (
           <>
             <button onClick={() => onDispatch(trip)}
-              className="flex-1 flex items-center justify-center gap-1 py-1.5
-                         text-xs bg-blue-500/15 text-blue-400 rounded-lg
-                         hover:bg-blue-500/25 transition font-medium">
+              className="btn-ghost flex-1 py-1.5 text-[10px] uppercase font-mono font-bold tracking-wider text-blue-500 dark:text-blue-400 justify-center">
               <Send size={11} /> Dispatch
             </button>
             <button onClick={() => onCancel(trip)}
-              className="flex-1 flex items-center justify-center gap-1 py-1.5
-                         text-xs bg-red-500/15 text-red-400 rounded-lg
-                         hover:bg-red-500/25 transition font-medium">
+              className="btn-ghost flex-1 py-1.5 text-[10px] uppercase font-mono font-bold tracking-wider text-danger justify-center">
               <XCircle size={11} /> Cancel
             </button>
           </>
@@ -121,24 +114,18 @@ function TripCard({ trip, isDark, onDispatch, onComplete, onCancel, onView }) {
         {trip.status === 'DISPATCHED' && (
           <>
             <button onClick={() => onComplete(trip)}
-              className="flex-1 flex items-center justify-center gap-1 py-1.5
-                         text-xs bg-green-500/15 text-green-400 rounded-lg
-                         hover:bg-green-500/25 transition font-medium">
+              className="btn-ghost flex-1 py-1.5 text-[10px] uppercase font-mono font-bold tracking-wider text-success justify-center">
               <CheckCircle size={11} /> Complete
             </button>
             <button onClick={() => onCancel(trip)}
-              className="flex-1 flex items-center justify-center gap-1 py-1.5
-                         text-xs bg-red-500/15 text-red-400 rounded-lg
-                         hover:bg-red-500/25 transition font-medium">
+              className="btn-ghost flex-1 py-1.5 text-[10px] uppercase font-mono font-bold tracking-wider text-danger justify-center">
               <XCircle size={11} /> Cancel
             </button>
           </>
         )}
         {(trip.status === 'COMPLETED' || trip.status === 'CANCELLED') && (
           <button onClick={() => onView(trip)}
-            className="flex-1 flex items-center justify-center gap-1 py-1.5
-                       text-xs bg-slate-700/50 text-slate-300 rounded-lg
-                       hover:bg-slate-700 transition font-medium">
+            className="btn-secondary flex-1 py-1 text-[10px] uppercase font-mono font-bold tracking-wider justify-center">
             <Eye size={11} /> View Details
           </button>
         )}
@@ -284,18 +271,10 @@ export default function Trips() {
 
   // ─── Styling helpers ───────────────────────────────────────────────────────
   const inputCls = (err) =>
-    `w-full bg-slate-800 border rounded-xl px-3 py-2 text-white
-     placeholder-slate-500 text-sm focus:outline-none focus:ring-2 transition
-     ${err
-       ? 'border-red-500 focus:ring-red-500/30'
-       : 'border-slate-700 focus:ring-orange-500/30 focus:border-orange-500'}`;
+    `input ${err ? 'ring-2 ring-danger' : ''}`;
 
   const selectCls = (err) =>
-    `w-full bg-slate-800 border rounded-xl px-3 py-2 text-white text-sm
-     focus:outline-none focus:ring-2 transition
-     ${err
-       ? 'border-red-500 focus:ring-red-500/30'
-       : 'border-slate-700 focus:ring-orange-500/30 focus:border-orange-500'}`;
+    `select ${err ? 'ring-2 ring-danger' : ''}`;
 
   // ─── Group trips by status ─────────────────────────────────────────────────
   const grouped = COLUMNS.reduce((acc, col) => {
@@ -305,11 +284,11 @@ export default function Trips() {
 
   if (loading) {
     return (
-      <div className="animate-pulse space-y-4">
-        <div className={`h-8 w-48 rounded-xl ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+      <div className="space-y-4">
+        <div className="h-8 w-48 rounded-xl bg-recessed animate-pulse shadow-[var(--shadow-recessed)]" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className={`h-96 rounded-2xl ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
-          <div className={`lg:col-span-2 h-96 rounded-2xl ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`} />
+          <div className="h-96 rounded-2xl bg-recessed animate-pulse" />
+          <div className="lg:col-span-2 h-96 rounded-2xl bg-recessed animate-pulse" />
         </div>
       </div>
     );
@@ -317,23 +296,18 @@ export default function Trips() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Trip Dispatcher</h1>
-        <p className={`text-sm mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-          Create and manage fleet trips in real-time
-        </p>
-      </div>
+      <PageHeader
+        title="Trip Dispatcher"
+        subtitle="Create and manage fleet trips in real-time"
+        icon={Route}
+      />
 
       {/* Two-panel layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
         {/* ── LEFT: Create Trip Form ─────────────────────────────────────── */}
-        <div className={`rounded-2xl border p-5
-          ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-          <h2 className="font-semibold text-base mb-4 flex items-center gap-2">
-            <Route size={16} className="text-orange-400" /> Create Trip
-          </h2>
+        <div className="rounded-2xl bg-panel shadow-[var(--shadow-card)] p-5 border border-[var(--border-color)]">
+          <SectionHeader icon={Route} title="Create Trip" />
 
           <form onSubmit={handleCreateTrip} className="space-y-3">
             {/* Source / Destination */}
@@ -369,7 +343,7 @@ export default function Trips() {
                 ))}
               </select>
               {selectedVehicle && (
-                <p className="text-xs text-green-400 mt-1 font-mono">
+                <p className="text-xs text-success mt-1 font-mono">
                   ✓ Max capacity: {selectedVehicle.maxLoadCapacity} kg
                 </p>
               )}
@@ -402,16 +376,16 @@ export default function Trips() {
               />
               {selectedVehicle && form.cargoWeight && (
                 <div className="mt-1.5">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className={cargoOverLimit ? 'text-red-400' : 'text-slate-400'}>
+                  <div className="flex justify-between text-xs mb-1 font-mono">
+                    <span className={cargoOverLimit ? 'text-danger' : 'text-text-sub'}>
                       {cargoNum} kg
                     </span>
-                    <span className="text-slate-500">{capacityNum} kg max</span>
+                    <span className="text-text-sub">{capacityNum} kg max</span>
                   </div>
-                  <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-recessed rounded-full overflow-hidden shadow-[inset_1px_1px_1px_rgba(0,0,0,0.1)]">
                     <div
                       className={`h-full rounded-full transition-all
-                        ${cargoOverLimit ? 'bg-red-500' : 'bg-orange-500'}`}
+                        ${cargoOverLimit ? 'bg-danger' : 'bg-accent'}`}
                       style={{ width: `${Math.min((cargoNum / capacityNum) * 100, 100)}%` }}
                     />
                   </div>
@@ -463,10 +437,7 @@ export default function Trips() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white
-                         py-2.5 rounded-xl text-sm font-semibold transition-all
-                         flex items-center justify-center gap-2 disabled:opacity-50
-                         shadow-lg shadow-orange-500/20 mt-2"
+              className="btn-primary w-full mt-2"
             >
               {submitting
                 ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -478,14 +449,7 @@ export default function Trips() {
 
         {/* ── RIGHT: Kanban Board ────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="font-semibold text-base flex items-center gap-2">
-            <Send size={16} className="text-blue-400" />
-            Trips Board
-            <span className={`text-xs font-mono ml-1
-              ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-              ({trips.length} total)
-            </span>
-          </h2>
+          <SectionHeader icon={Send} title="Trips Board" badge={trips.length} />
 
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
             {COLUMNS.map(col => (
@@ -497,8 +461,7 @@ export default function Trips() {
                                     uppercase tracking-wider ${col.color}`}>
                     {col.label}
                   </span>
-                  <span className={`text-xs font-mono px-1.5 py-0.5 rounded-md
-                    ${isDark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                  <span className="text-xs font-mono px-1.5 py-0.5 rounded-md bg-recessed text-text-sub">
                     {grouped[col.status]?.length || 0}
                   </span>
                 </div>
@@ -506,8 +469,7 @@ export default function Trips() {
                 {/* Cards */}
                 <div className="space-y-2">
                   {grouped[col.status]?.length === 0 ? (
-                    <div className={`text-center py-8 text-xs rounded-xl border-dashed border
-                      ${isDark ? 'text-slate-600 border-slate-700' : 'text-slate-400 border-slate-200'}`}>
+                    <div className="text-center py-8 text-xs rounded-xl border-dashed border border-b-shadow/30 text-text-sub font-mono uppercase tracking-wider">
                       No trips
                     </div>
                   ) : (
@@ -542,37 +504,32 @@ export default function Trips() {
         size="sm"
       >
         <div className="space-y-4">
-          <div className={`p-4 rounded-xl border text-sm
-            ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-            <p className="font-mono text-orange-400 font-bold mb-2">
+          <div className="p-4 rounded-xl bg-[var(--background)] shadow-[var(--shadow-recessed)] border border-b-shadow/20 text-sm">
+            <p className="font-mono text-accent font-bold mb-2">
               {dispatchTarget?.tripCode}
             </p>
-            <p className={isDark ? 'text-slate-300' : 'text-slate-600'}>
+            <p className="text-text-main">
               <span className="font-medium">{dispatchTarget?.source}</span>
               {' → '}
               <span className="font-medium">{dispatchTarget?.destination}</span>
             </p>
-            <p className={`mt-2 text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Vehicle <b className="text-slate-300">{dispatchTarget?.vehicle?.registrationNo}</b> and
-              driver <b className="text-slate-300">{dispatchTarget?.driver?.name}</b> will be
-              marked <b className="text-blue-400">On Trip</b>.
+            <p className="mt-2 text-xs text-text-sub">
+              Vehicle <b className="text-text-main">{dispatchTarget?.vehicle?.registrationNo}</b> and
+              driver <b className="text-text-main">{dispatchTarget?.driver?.name}</b> will be
+              marked <b className="text-blue-500 dark:text-blue-400">On Trip</b>.
             </p>
           </div>
           <div className="flex gap-3">
             <button
               onClick={() => setDispatchTarget(null)}
-              className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition
-                ${isDark ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+              className="btn-secondary flex-1"
             >
               Cancel
             </button>
             <button
               onClick={handleDispatch}
               disabled={actionLoading}
-              className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2.5
-                         rounded-xl text-sm font-medium transition flex items-center
-                         justify-center gap-2 disabled:opacity-50"
+              className="btn-primary bg-blue-600 hover:bg-blue-500 text-white shadow-blue-500/20 flex-1"
             >
               {actionLoading
                 ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
@@ -593,7 +550,7 @@ export default function Trips() {
         <form onSubmit={handleComplete} className="space-y-4">
           <Field label="End Odometer Reading (km) *" error={completeErrors.endOdometer}>
             <div className="relative">
-              <Gauge size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Gauge size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-sub" />
               <input
                 type="number" min="0"
                 value={completeForm.endOdometer}
@@ -608,7 +565,7 @@ export default function Trips() {
           </Field>
           <Field label="Fuel Consumed (L)" error={completeErrors.fuelConsumed}>
             <div className="relative">
-              <Fuel size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Fuel size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-sub" />
               <input
                 type="number" min="0"
                 value={completeForm.fuelConsumed}
@@ -629,15 +586,11 @@ export default function Trips() {
           </Field>
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setCompleteTarget(null)}
-              className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition
-                ${isDark ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+              className="btn-secondary flex-1">
               Back
             </button>
             <button type="submit" disabled={actionLoading}
-              className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2.5
-                         rounded-xl text-sm font-medium transition flex items-center
-                         justify-center gap-2 disabled:opacity-50">
+              className="btn-primary bg-success flex-1">
               {actionLoading
                 ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 : <CheckCircle size={14} />}
@@ -655,17 +608,15 @@ export default function Trips() {
         size="sm"
       >
         <div className="space-y-4">
-          <div className={`p-4 rounded-xl border text-sm
-            ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-            <p className="font-mono text-orange-400 font-bold mb-1">
+          <div className="p-4 rounded-xl border border-b-shadow/30 bg-chassis shadow-[var(--shadow-recessed)] text-sm">
+            <p className="font-mono text-accent font-bold mb-1">
               {cancelTarget?.tripCode}
             </p>
-            <p className={`text-sm ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+            <p className="text-text-main">
               Are you sure you want to cancel this trip?
             </p>
             {cancelTarget?.status === 'DISPATCHED' && (
-              <div className="mt-3 flex items-start gap-2 text-xs text-amber-400
-                              bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5">
+              <div className="mt-3 flex items-start gap-2 text-xs text-warning bg-warning/10 border border-warning/20 rounded-lg p-2.5 font-mono uppercase tracking-wider">
                 <AlertCircle size={13} className="shrink-0 mt-0.5" />
                 <span>
                   Vehicle <b>{cancelTarget?.vehicle?.registrationNo}</b> and
@@ -677,15 +628,11 @@ export default function Trips() {
           </div>
           <div className="flex gap-3">
             <button onClick={() => setCancelTarget(null)}
-              className={`flex-1 py-2.5 rounded-xl border text-sm font-medium transition
-                ${isDark ? 'border-slate-700 text-slate-400 hover:bg-slate-800'
-                          : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+              className="btn-secondary flex-1">
               Keep Trip
             </button>
             <button onClick={handleCancel} disabled={actionLoading}
-              className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2.5
-                         rounded-xl text-sm font-medium transition flex items-center
-                         justify-center gap-2 disabled:opacity-50">
+              className="btn-danger flex-1">
               {actionLoading
                 ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 : <XCircle size={14} />}
@@ -706,17 +653,16 @@ export default function Trips() {
           <div className="space-y-5">
             {/* Status + route */}
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3 text-lg font-semibold">
+              <div className="flex items-center gap-3 text-lg font-semibold font-mono text-text-main">
                 <span>{viewTrip.source}</span>
-                <ArrowRight size={18} className="text-orange-400" />
+                <ArrowRight size={18} className="text-accent" />
                 <span>{viewTrip.destination}</span>
               </div>
               <StatusBadge status={viewTrip.status} size="md" />
             </div>
 
             {/* Details grid */}
-            <div className={`grid grid-cols-2 gap-4 p-4 rounded-xl border text-sm
-              ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="grid grid-cols-2 gap-4 p-4 rounded-xl border border-b-shadow/30 bg-chassis shadow-[var(--shadow-recessed)] text-sm font-mono">
               {[
                 { label: 'Vehicle', value: `${viewTrip.vehicle?.registrationNo} — ${viewTrip.vehicle?.name}` },
                 { label: 'Driver', value: viewTrip.driver?.name },
@@ -728,31 +674,30 @@ export default function Trips() {
                 { label: 'Scheduled', value: viewTrip.scheduledAt ? new Date(viewTrip.scheduledAt).toLocaleString('en-IN') : '—' },
               ].map(({ label, value }) => (
                 <div key={label}>
-                  <p className="text-xs text-slate-500 mb-0.5">{label}</p>
-                  <p className="font-medium text-sm">{value}</p>
+                  <p className="text-[10px] font-bold text-text-sub uppercase tracking-wider mb-0.5">{label}</p>
+                  <p className="font-bold text-sm text-text-main">{value}</p>
                 </div>
               ))}
             </div>
 
             {/* Timeline */}
             <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              <p className="text-[10px] font-bold text-text-sub font-mono uppercase tracking-wider mb-3">
                 Timeline
               </p>
               <div className="space-y-2">
                 {[
-                  { label: 'Created', time: viewTrip.createdAt, color: 'bg-slate-500' },
-                  { label: 'Dispatched', time: viewTrip.startedAt, color: 'bg-blue-500' },
+                  { label: 'Created', time: viewTrip.createdAt, color: 'bg-text-sub' },
+                  { label: 'Dispatched', time: viewTrip.startedAt, color: 'bg-blue-500 shadow-[0_0_8px_#3b82f6]' },
                   { label: viewTrip.status === 'CANCELLED' ? 'Cancelled' : 'Completed',
-                    time: viewTrip.completedAt, color: viewTrip.status === 'CANCELLED' ? 'bg-red-500' : 'bg-green-500' },
+                    time: viewTrip.completedAt, color: viewTrip.status === 'CANCELLED' ? 'bg-danger shadow-[var(--shadow-glow-danger)]' : 'bg-success shadow-[var(--shadow-glow-success)]' },
                 ].map(({ label, time, color }) => (
-                  <div key={label} className="flex items-center gap-3 text-sm">
-                    <div className={`w-2 h-2 rounded-full shrink-0 ${time ? color : 'bg-slate-700'}`} />
-                    <span className={time ? (isDark ? 'text-slate-300' : 'text-slate-700') : 'text-slate-600'}>
+                  <div key={label} className="flex items-center gap-3 text-sm font-mono">
+                    <div className={`w-2 h-2 rounded-full shrink-0 ${time ? color : 'bg-recessed'}`} />
+                    <span className={time ? 'text-text-main' : 'text-text-sub'}>
                       {label}
                     </span>
-                    <span className={`ml-auto text-xs font-mono
-                      ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                    <span className="ml-auto text-xs text-text-sub">
                       {time ? new Date(time).toLocaleString('en-IN') : 'Pending'}
                     </span>
                   </div>
@@ -762,14 +707,13 @@ export default function Trips() {
 
             {/* Financial summary */}
             {viewTrip.revenue && (
-              <div className={`p-4 rounded-xl border
-                ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+              <div className="p-4 rounded-xl border border-b-shadow/30 bg-chassis shadow-[var(--shadow-recessed)]">
+                <p className="text-[10px] font-bold text-text-sub font-mono uppercase tracking-wider mb-2">
                   Financial Summary
                 </p>
                 <div className="flex justify-between text-sm">
-                  <span className={isDark ? 'text-slate-400' : 'text-slate-500'}>Revenue</span>
-                  <span className="font-mono text-green-400 font-semibold">
+                  <span className="text-text-sub font-mono text-xs uppercase tracking-wider">Revenue</span>
+                  <span className="font-bold font-mono text-success">
                     ₹{viewTrip.revenue.toLocaleString()}
                   </span>
                 </div>
@@ -778,10 +722,8 @@ export default function Trips() {
 
             {/* Notes */}
             {viewTrip.notes && (
-              <div className={`p-3 rounded-xl border text-sm
-                ${isDark ? 'bg-slate-800 border-slate-700 text-slate-300'
-                          : 'bg-slate-50 border-slate-200 text-slate-600'}`}>
-                <p className="text-xs text-slate-500 mb-1 flex items-center gap-1">
+              <div className="p-3 rounded-xl border border-b-shadow/30 bg-chassis shadow-[var(--shadow-recessed)] text-sm text-text-main font-mono">
+                <p className="text-[10px] font-bold text-text-sub uppercase tracking-wider mb-1 flex items-center gap-1">
                   <FileText size={11} /> Notes
                 </p>
                 {viewTrip.notes}

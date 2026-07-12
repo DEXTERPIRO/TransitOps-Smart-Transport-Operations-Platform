@@ -5,7 +5,7 @@ export const useAuthStore = create(persist(
   (set) => ({
     user: null,
     accessToken: null,
-    theme: 'dark',
+    theme: 'light',
     setAuth: (user, accessToken) => set({ user, accessToken }),
     logout: () => set({ user: null, accessToken: null }),
     setTheme: (theme) => set({ theme }),

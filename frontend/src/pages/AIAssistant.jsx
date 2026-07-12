@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bot, Send, User, Loader2, Trash2 } from 'lucide-react';
-import { aiApi } from '../api';
+import { aiAPI } from '../api';
+import { PageHeader } from '../components/ui';
 import toast from 'react-hot-toast';
 
 const SUGGESTIONS = [
@@ -35,11 +36,12 @@ export default function AIAssistant() {
     setInput('');
     setLoading(true);
     try {
-      const { data } = await aiApi.ask(msg);
-      setMessages((m) => [...m, { role: 'assistant', content: data.reply, ts: new Date() }]);
-    } catch {
-      toast.error('AI request failed');
-      setMessages((m) => [...m, { role: 'assistant', content: '❌ Sorry, I encountered an error. Please try again.', ts: new Date() }]);
+      const res = await aiAPI.chat(msg);
+      setMessages((m) => [...m, { role: 'assistant', content: res.reply || res, ts: new Date() }]);
+    } catch (err) {
+      const errMsg = err?.error || 'AI request failed';
+      toast.error(errMsg);
+      setMessages((m) => [...m, { role: 'assistant', content: `❌ Sorry, I encountered an error: ${errMsg}. Please try again.`, ts: new Date() }]);
     } finally {
       setLoading(false);
     }
@@ -54,38 +56,39 @@ export default function AIAssistant() {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-10rem)]">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">AI Assistant</h1>
-          <p className="page-subtitle">Ask questions about your fleet operations</p>
-        </div>
-        <button onClick={clearChat} className="btn-ghost gap-2">
-          <Trash2 size={15} /> Clear
-        </button>
-      </div>
+    <div className="flex flex-col h-[calc(100vh-10rem)] relative">
+      <PageHeader
+        title="AI Assistant"
+        subtitle="Ask questions about your fleet operations"
+        icon={Bot}
+        action={
+          <button onClick={clearChat} className="btn-secondary gap-2 font-mono text-xs py-1.5 px-3">
+            <Trash2 size={13} /> Clear
+          </button>
+        }
+      />
 
       {/* Chat window */}
-      <div className="flex-1 card overflow-y-auto space-y-4 mb-4">
+      <div className="flex-1 card bg-panel shadow-[var(--shadow-card)] border border-[var(--border-color)] overflow-y-auto space-y-4 mb-4 p-5 relative">
         {messages.map((msg, i) => (
           <div key={i} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-              msg.role === 'user' ? 'bg-brand-500' : 'bg-dark-700'
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 border ${
+              msg.role === 'user' ? 'bg-accent border-accent/20 shadow-[var(--shadow-glow)]' : 'bg-recessed border-b-shadow/30'
             }`}>
               {msg.role === 'user'
                 ? <User size={15} className="text-white" />
-                : <Bot size={15} className="text-brand-400" />
+                : <Bot size={15} className="text-accent" />
               }
             </div>
             <div className={`max-w-[75%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col gap-1`}>
-              <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+              <div className={`px-4 py-3 rounded-2xl text-xs leading-relaxed border ${
                 msg.role === 'user'
-                  ? 'bg-brand-500 text-white rounded-tr-sm'
-                  : 'bg-dark-800 text-dark-100 rounded-tl-sm'
+                  ? 'bg-accent text-white rounded-tr-sm border-accent/20 shadow-[var(--shadow-glow)] font-mono'
+                  : 'bg-recessed text-text-main rounded-tl-sm border-b-shadow/35 shadow-[var(--shadow-recessed)] font-mono'
               }`}>
                 {msg.content}
               </div>
-              <span className="text-xs text-dark-500">
+              <span className="text-[9px] font-mono text-text-sub uppercase tracking-wider">
                 {msg.ts.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
@@ -93,12 +96,12 @@ export default function AIAssistant() {
         ))}
         {loading && (
           <div className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-dark-700 flex items-center justify-center">
-              <Bot size={15} className="text-brand-400" />
+            <div className="w-8 h-8 rounded-full bg-recessed border border-b-shadow/30 flex items-center justify-center">
+              <Bot size={15} className="text-accent" />
             </div>
-            <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-dark-800 flex items-center gap-2">
-              <Loader2 size={14} className="animate-spin text-brand-400" />
-              <span className="text-sm text-dark-400">Thinking…</span>
+            <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-recessed border border-b-shadow/35 flex items-center gap-2 font-mono shadow-[var(--shadow-recessed)]">
+              <Loader2 size={14} className="animate-spin text-accent" />
+              <span className="text-xs text-text-sub">Thinking…</span>
             </div>
           </div>
         )}
@@ -111,8 +114,7 @@ export default function AIAssistant() {
           <button
             key={s}
             onClick={() => send(s)}
-            className="text-xs px-3 py-1.5 rounded-full bg-dark-800 border border-dark-700 
-                       text-dark-300 hover:border-brand-500/50 hover:text-brand-400 transition-all"
+            className="text-[9px] px-3.5 py-2 rounded-full border border-b-shadow/30 text-text-sub hover:text-[var(--accent)] hover:border-[var(--accent)]/40 bg-[var(--background)] shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-floating)] active:shadow-[var(--shadow-pressed)] hover:-translate-y-[1px] active:translate-y-[1px] font-mono uppercase tracking-wider transition-all duration-150"
           >
             {s}
           </button>

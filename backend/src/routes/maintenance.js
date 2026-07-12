@@ -1,7 +1,6 @@
 const router = require('express').Router();
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../utils/prisma');
 const { verifyToken, requireRoles } = require('../middleware/auth');
-const prisma = new PrismaClient();
 
 router.get('/', verifyToken, async (req, res) => {
   try {
@@ -32,6 +31,14 @@ router.post('/', verifyToken,
     if (vehicle.status === 'ON_TRIP')
       return res.status(400).json({
         error: 'Cannot add maintenance to a vehicle currently on a trip'
+      });
+
+    const activeLog = await prisma.maintenanceLog.findFirst({
+      where: { vehicleId, status: 'ACTIVE' }
+    });
+    if (activeLog)
+      return res.status(400).json({
+        error: 'This vehicle is already in shop / has an active maintenance record.'
       });
 
     // BUSINESS RULE: Creating maintenance → vehicle becomes IN_SHOP
