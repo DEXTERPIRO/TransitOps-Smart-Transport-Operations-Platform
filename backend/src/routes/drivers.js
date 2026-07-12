@@ -66,7 +66,7 @@ router.post('/', verifyToken,
   requireRoles('FLEET_MANAGER', 'SAFETY_OFFICER'), async (req, res) => {
   try {
     const {
-      name, licenseNumber, licenseNo, licenseCategory,
+      name, email, licenseNumber, licenseNo, licenseCategory,
       licenseExpiry, contactNumber, region, safetyScore
     } = req.body;
 
@@ -92,7 +92,7 @@ router.post('/', verifyToken,
 
     const driver = await prisma.driver.create({
       data: {
-        name, licenseNumber: resolvedLicenseNumber, licenseCategory,
+        name, email: email || null, licenseNumber: resolvedLicenseNumber, licenseCategory,
         licenseExpiry: expiry, contactNumber, region,
         safetyScore: parseFloat(safetyScore) || 100
       }
@@ -111,7 +111,7 @@ router.put('/:id', verifyToken,
   requireRoles('FLEET_MANAGER', 'SAFETY_OFFICER'), async (req, res) => {
   try {
     const {
-      name, licenseCategory, licenseExpiry,
+      name, email, licenseCategory, licenseExpiry,
       contactNumber, region, safetyScore, status
     } = req.body;
 
@@ -123,7 +123,7 @@ router.put('/:id', verifyToken,
     const driver = await prisma.driver.update({
       where: { id: req.params.id },
       data: {
-        name, licenseCategory,
+        name, email, licenseCategory,
         licenseExpiry: licenseExpiry ? new Date(licenseExpiry) : undefined,
         contactNumber, region,
         safetyScore: safetyScore ? parseFloat(safetyScore) : undefined,

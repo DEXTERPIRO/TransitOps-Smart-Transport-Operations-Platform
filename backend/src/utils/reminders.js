@@ -104,7 +104,49 @@ const checkLicenseExpiriesAndSendEmails = async (targetEmail = null) => {
     });
 
     console.log(`[Reminder] Expiry notifications sent successfully to ${emailRecipient}`);
-    return { sent: true, expiredCount: expiredDrivers.length, expiringSoonCount: expiringSoonDrivers.length };
+
+    // Send individual reminder emails to each driver who has an email configured
+    const driversNotified = [];
+    const allFlagged = [...expiredDrivers.map(d => ({ ...d, expired: true })), ...expiringSoonDrivers.map(d => ({ ...d, expired: false }))];
+    
+    for (const d of allFlagged) {
+      if (d.email) {
+        try {
+          const expiryDate = new Date(d.licenseExpiry).toLocaleDateString('en-IN');
+          const statusText = d.expired ? 'EXPIRED' : 'EXPIRING SOON';
+          const alertColor = d.expired ? '#ef4444' : '#f59e0b';
+          
+          const driverHtml = `
+            <div style="font-family: monospace; padding: 24px; background-color: #1e293b; color: #f8fafc; border-radius: 16px; border: 1px solid #475569; max-width: 500px;">
+              <h2 style="color: ${alertColor}; margin-top: 0; text-transform: uppercase; font-size: 16px;">License Renewal Required</h2>
+              <p>Dear ${d.name},</p>
+              <p>This is a notification that your driver's license (<strong>${d.licenseNumber}</strong>) is flagged as <strong>${statusText}</strong>.</p>
+              <p>License Expiry Date: <strong style="color: ${alertColor};">${expiryDate}</strong></p>
+              <p>Please renew your license immediately and submit the updated documents to the fleet manager to remain active on dispatch trips.</p>
+              <hr style="border: 0; border-top: 1px solid #475569; margin: 20px 0;" />
+              <p style="font-size: 11px; color: #94a3b8;">TransitOps Automated System Notification</p>
+            </div>
+          `;
+          
+          await sendEmail({
+            to: d.email,
+            subject: `Action Required: Driver License Expiry Warning - ${d.name}`,
+            html: driverHtml
+          });
+          driversNotified.push(d.name);
+          console.log(`[Reminder] Sent individual expiry warning to driver ${d.name} (${d.email})`);
+        } catch (e) {
+          console.error(`[Reminder] Failed to send email to driver ${d.name}:`, e);
+        }
+      }
+    }
+
+    return { 
+      sent: true, 
+      expiredCount: expiredDrivers.length, 
+      expiringSoonCount: expiringSoonDrivers.length,
+      driversNotified
+    };
   } catch (err) {
     console.error("[Reminder] Failed to process license expiry checks:", err);
     return { sent: false, error: err.message };

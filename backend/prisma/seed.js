@@ -57,25 +57,25 @@ async function main() {
 
   // Drivers
   const d1 = await prisma.driver.create({ data: {
-    name: 'Alex Johnson', licenseNumber: 'DL-4945',
+    name: 'Alex Johnson', email: 'alex@transitops.com', licenseNumber: 'DL-4945',
     licenseCategory: 'LMV', contactNumber: '+91 9876543210',
     licenseExpiry: new Date('2026-08-15'),
     safetyScore: 94, region: 'North', status: 'AVAILABLE'
   }});
   const d2 = await prisma.driver.create({ data: {
-    name: 'Sam Patel', licenseNumber: 'DL-8800',
+    name: 'Sam Patel', email: 'strangegaming66@gmail.com', licenseNumber: 'DL-8800',
     licenseCategory: 'HMV', contactNumber: '+91 9765432109',
     licenseExpiry: new Date('2025-03-10'),
     safetyScore: 78, region: 'South', status: 'AVAILABLE'
   }});
   const d3 = await prisma.driver.create({ data: {
-    name: 'Rajan Mehta', licenseNumber: 'DL-4400',
+    name: 'Rajan Mehta', email: 'rajan@transitops.com', licenseNumber: 'DL-4400',
     licenseCategory: 'LMV', contactNumber: '+91 9654321098',
     licenseExpiry: new Date('2024-12-01'),
     safetyScore: 61, region: 'East', status: 'SUSPENDED'
   }});
   const d4 = await prisma.driver.create({ data: {
-    name: 'Priya Sharma', licenseNumber: 'DL-6620',
+    name: 'Priya Sharma', email: 'priya@transitops.com', licenseNumber: 'DL-6620',
     licenseCategory: 'HMV', contactNumber: '+91 9543210987',
     licenseExpiry: new Date('2027-06-30'),
     safetyScore: 98, region: 'West', status: 'AVAILABLE'

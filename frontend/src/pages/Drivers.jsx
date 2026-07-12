@@ -13,7 +13,7 @@ const STATUSES_EDIT = ['AVAILABLE', 'OFF_DUTY', 'SUSPENDED'];
 const REGIONS = ['North', 'South', 'East', 'West'];
 
 const EMPTY_FORM = {
-  name: '', licenseNo: '', licenseCategory: '',
+  name: '', email: '', licenseNo: '', licenseCategory: '',
   licenseExpiry: '', contactNumber: '',
   safetyScore: '100', region: ''
 };
@@ -32,6 +32,9 @@ function validate(form) {
     e.contactNumber = 'Contact number is required';
   } else if (!/^[6-9]\d{9}$/.test(form.contactNumber.replace(/\s/g, ''))) {
     e.contactNumber = 'Enter a valid 10-digit phone number';
+  }
+  if (form.email && form.email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+    e.email = 'Enter a valid email address';
   }
   const score = parseFloat(form.safetyScore);
   if (form.safetyScore !== '' && (isNaN(score) || score < 0 || score > 100)) {
@@ -161,6 +164,7 @@ export default function Drivers() {
     setEditDriver(d);
     setForm({
       name: d.name,
+      email: d.email || '',
       licenseNo: d.licenseNo,
       licenseCategory: d.licenseCategory,
       licenseExpiry: d.licenseExpiry ? d.licenseExpiry.split('T')[0] : '',
@@ -303,7 +307,12 @@ export default function Drivers() {
                   return (
                     <tr key={d.id}
                       className={`table-row ${isSuspended ? 'bg-danger/5' : ''}`}>
-                      <td className="table-cell font-medium text-text-main border-b border-b-shadow/20">{d.name}</td>
+                      <td className="table-cell font-medium text-text-main border-b border-b-shadow/20">
+                        <div className="flex flex-col">
+                          <span>{d.name}</span>
+                          {d.email && <span className="text-[10px] text-text-sub font-mono">{d.email}</span>}
+                        </div>
+                      </td>
                       <td className="table-cell border-b border-b-shadow/20">
                         <span className="font-mono text-xs text-text-main">{d.licenseNo}</span>
                       </td>
@@ -365,6 +374,7 @@ export default function Drivers() {
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <p className="font-medium text-text-main">{d.name}</p>
+                      {d.email && <span className="text-[10px] text-text-sub font-mono block">{d.email}</span>}
                       <span className="font-mono text-xs text-text-sub">{d.licenseNo}</span>
                     </div>
                     <StatusBadge status={d.status} />
@@ -425,6 +435,15 @@ export default function Drivers() {
                 onChange={e => handleChange('name', e.target.value)}
                 placeholder="e.g. Rajesh Kumar"
                 className={inputCls(errors.name)}
+              />
+            </Field>
+            <Field label="Email Address" error={errors.email}>
+              <input
+                type="email"
+                value={form.email}
+                onChange={e => handleChange('email', e.target.value)}
+                placeholder="driver@transitops.com"
+                className={inputCls(errors.email)}
               />
             </Field>
             <Field label="License Number *" error={errors.licenseNo}>
