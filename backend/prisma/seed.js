@@ -1,239 +1,139 @@
 const { PrismaClient } = require('@prisma/client');
-const { PrismaPg } = require('@prisma/adapter-pg');
-const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
-require('dotenv').config();
-
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL ||
-    'postgresql://postgres:postgres123@localhost:5432/transitops',
-});
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
-
+const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Seeding TransitOps database...');
+  // Clear all tables
+  await prisma.vehicleDocument.deleteMany();
+  await prisma.expense.deleteMany();
+  await prisma.fuelLog.deleteMany();
+  await prisma.maintenanceLog.deleteMany();
+  await prisma.trip.deleteMany();
+  await prisma.driver.deleteMany();
+  await prisma.vehicle.deleteMany();
+  await prisma.user.deleteMany();
 
-  // ── Users ─────────────────────────────────────────────────────────────
-  const users = [
-    { name: 'Fleet Manager', email: 'fleet@transitops.com',    password: 'Fleet@123',    role: 'FLEET_MANAGER' },
-    { name: 'Dispatcher',    email: 'dispatch@transitops.com', password: 'Dispatch@123', role: 'DISPATCHER' },
-    { name: 'Safety Officer',email: 'safety@transitops.com',   password: 'Safety@123',   role: 'SAFETY_OFFICER' },
-    { name: 'Finance',       email: 'finance@transitops.com',  password: 'Finance@123',  role: 'FINANCE' },
-    { name: 'Admin',         email: 'admin@transitops.com',    password: 'Admin@123',    role: 'ADMIN' },
-  ];
+  // Users
+  const pass = async (p) => bcrypt.hash(p, 12);
+  
+  const fleet = await prisma.user.create({ data: {
+    name: 'Fleet Manager', email: 'fleet@transitops.com',
+    password: await pass('Fleet@123'), role: 'FLEET_MANAGER'
+  }});
+  const dispatch = await prisma.user.create({ data: {
+    name: 'Dispatcher', email: 'dispatch@transitops.com',
+    password: await pass('Dispatch@123'), role: 'DISPATCHER'
+  }});
+  const safety = await prisma.user.create({ data: {
+    name: 'Safety Officer', email: 'safety@transitops.com',
+    password: await pass('Safety@123'), role: 'SAFETY_OFFICER'
+  }});
+  const finance = await prisma.user.create({ data: {
+    name: 'Financial Analyst', email: 'finance@transitops.com',
+    password: await pass('Finance@123'), role: 'FINANCIAL_ANALYST'
+  }});
 
-  for (const u of users) {
-    await prisma.user.upsert({
-      where: { email: u.email },
-      update: {},
-      create: { ...u, password: await bcrypt.hash(u.password, 12) },
-    });
-  }
-  console.log('✅ Users seeded');
+  // Vehicles
+  const v1 = await prisma.vehicle.create({ data: {
+    registrationNo: 'VAN-05', name: 'Ford Transit Van',
+    type: 'VAN', maxLoadCapacity: 500, odometer: 12400,
+    acquisitionCost: 850000, region: 'North', status: 'AVAILABLE'
+  }});
+  const v2 = await prisma.vehicle.create({ data: {
+    registrationNo: 'TRUCK-8', name: 'Tata Ace Truck',
+    type: 'TRUCK', maxLoadCapacity: 2000, odometer: 45200,
+    acquisitionCost: 1200000, region: 'South', status: 'AVAILABLE'
+  }});
+  const v3 = await prisma.vehicle.create({ data: {
+    registrationNo: 'AG10-09', name: 'Mahindra Bolero',
+    type: 'CAR', maxLoadCapacity: 400, odometer: 8900,
+    acquisitionCost: 650000, region: 'East', status: 'IN_SHOP'
+  }});
+  const v4 = await prisma.vehicle.create({ data: {
+    registrationNo: 'BUS-01', name: 'Ashok Leyland Bus',
+    type: 'BUS', maxLoadCapacity: 5000, odometer: 98000,
+    acquisitionCost: 3500000, region: 'West', status: 'AVAILABLE'
+  }});
 
-  // ── Vehicles ──────────────────────────────────────────────────────────
-  const vehicles = [
-    { regNumber: 'MH12AB1234', make: 'Tata',    model: 'Starbus',  year: 2021, type: 'BUS',     capacity: 52, status: 'ACTIVE',      fuelType: 'DIESEL' },
-    { regNumber: 'MH12CD5678', make: 'Ashok',   model: 'Viking',   year: 2020, type: 'BUS',     capacity: 45, status: 'ACTIVE',      fuelType: 'DIESEL' },
-    { regNumber: 'MH12EF9012', make: 'Force',   model: 'Traveller',year: 2022, type: 'MINIBUS', capacity: 17, status: 'MAINTENANCE', fuelType: 'DIESEL' },
-    { regNumber: 'MH12GH3456', make: 'Mahindra',model: 'Supro',    year: 2023, type: 'VAN',     capacity: 9,  status: 'ACTIVE',      fuelType: 'CNG' },
-    { regNumber: 'MH12IJ7890', make: 'Tata',    model: 'Ultra',    year: 2019, type: 'TRUCK',   capacity: 0,  status: 'ACTIVE',      fuelType: 'DIESEL' },
-    { regNumber: 'MH12KL2345', make: 'Volvo',   model: '9400',     year: 2022, type: 'BUS',     capacity: 55, status: 'INACTIVE',    fuelType: 'DIESEL' },
-  ];
+  // Drivers
+  const d1 = await prisma.driver.create({ data: {
+    name: 'Alex Johnson', licenseNumber: 'DL-4945',
+    licenseCategory: 'LMV', contactNumber: '+91 9876543210',
+    licenseExpiry: new Date('2026-08-15'),
+    safetyScore: 94, region: 'North', status: 'AVAILABLE'
+  }});
+  const d2 = await prisma.driver.create({ data: {
+    name: 'Sam Patel', licenseNumber: 'DL-8800',
+    licenseCategory: 'HMV', contactNumber: '+91 9765432109',
+    licenseExpiry: new Date('2025-03-10'),
+    safetyScore: 78, region: 'South', status: 'AVAILABLE'
+  }});
+  const d3 = await prisma.driver.create({ data: {
+    name: 'Rajan Mehta', licenseNumber: 'DL-4400',
+    licenseCategory: 'LMV', contactNumber: '+91 9654321098',
+    licenseExpiry: new Date('2024-12-01'),
+    safetyScore: 61, region: 'East', status: 'SUSPENDED'
+  }});
+  const d4 = await prisma.driver.create({ data: {
+    name: 'Priya Sharma', licenseNumber: 'DL-6620',
+    licenseCategory: 'HMV', contactNumber: '+91 9543210987',
+    licenseExpiry: new Date('2027-06-30'),
+    safetyScore: 98, region: 'West', status: 'AVAILABLE'
+  }});
 
-  const createdVehicles = [];
-  for (const v of vehicles) {
-    const veh = await prisma.vehicle.upsert({
-      where: { regNumber: v.regNumber },
-      update: {},
-      create: { ...v, odometer: Math.random() * 100000 + 10000 },
-    });
-    createdVehicles.push(veh);
-  }
-  console.log('✅ Vehicles seeded');
+  // Trips
+  const t1 = await prisma.trip.create({ data: {
+    tripCode: 'TR001', source: 'Mumbai', destination: 'Pune',
+    vehicleId: v1.id, driverId: d1.id, dispatchedById: dispatch.id,
+    cargoWeight: 450, plannedDistance: 148, revenue: 12000,
+    status: 'COMPLETED', actualDistance: 152, fuelConsumed: 18,
+    startOdometer: 12400, endOdometer: 12552,
+    startedAt: new Date('2024-07-01T08:00:00'),
+    completedAt: new Date('2024-07-01T12:00:00'),
+  }});
+  const t2 = await prisma.trip.create({ data: {
+    tripCode: 'TR002', source: 'Delhi', destination: 'Agra',
+    vehicleId: v2.id, driverId: d2.id, dispatchedById: dispatch.id,
+    cargoWeight: 1200, plannedDistance: 210, revenue: 18000,
+    status: 'DISPATCHED',
+    startedAt: new Date(),
+  }});
 
-  // ── Drivers ───────────────────────────────────────────────────────────
-  const drivers = [
-    { employeeId: 'EMP001', name: 'Ramesh Kumar',   email: 'ramesh@transitops.com',   phone: '9876543210', licenseNumber: 'MH0120210001', licenseExpiry: new Date('2027-06-30'), experience: 8 },
-    { employeeId: 'EMP002', name: 'Suresh Patel',   email: 'suresh@transitops.com',   phone: '9876543211', licenseNumber: 'MH0120200002', licenseExpiry: new Date('2026-12-31'), experience: 5 },
-    { employeeId: 'EMP003', name: 'Anil Singh',     email: 'anil@transitops.com',     phone: '9876543212', licenseNumber: 'MH0120190003', licenseExpiry: new Date('2025-03-31'), experience: 12 },
-    { employeeId: 'EMP004', name: 'Vijay Sharma',   email: 'vijay@transitops.com',    phone: '9876543213', licenseNumber: 'MH0120220004', licenseExpiry: new Date('2028-08-31'), experience: 3 },
-    { employeeId: 'EMP005', name: 'Priya Desai',    email: 'priya@transitops.com',    phone: '9876543214', licenseNumber: 'MH0120230005', licenseExpiry: new Date('2029-01-31'), experience: 2 },
-  ];
+  // Update statuses for dispatched trip
+  await prisma.vehicle.update({ where: { id: v2.id }, data: { status: 'ON_TRIP' }});
+  await prisma.driver.update({ where: { id: d2.id }, data: { status: 'ON_TRIP' }});
 
-  const createdDrivers = [];
-  for (const d of drivers) {
-    const drv = await prisma.driver.upsert({
-      where: { employeeId: d.employeeId },
-      update: {},
-      create: d,
-    });
-    createdDrivers.push(drv);
-  }
-  console.log('✅ Drivers seeded');
+  // Maintenance
+  await prisma.maintenanceLog.create({ data: {
+    vehicleId: v3.id, type: 'OIL_CHANGE',
+    description: 'Routine oil change and filter replacement',
+    cost: 3500, serviceCenter: 'AutoCare Garage',
+    status: 'ACTIVE'
+  }});
 
-  // ── Routes ────────────────────────────────────────────────────────────
-  const routes = [
-    { name: 'City Central - Airport',      code: 'RT001', origin: 'City Central',   destination: 'Airport',       distance: 28.5, duration: 45 },
-    { name: 'Station - Industrial Zone',   code: 'RT002', origin: 'Railway Station',destination: 'Industrial Zone', distance: 15.2, duration: 30 },
-    { name: 'University Loop',             code: 'RT003', origin: 'University',     destination: 'University',    distance: 22.0, duration: 60 },
-    { name: 'Suburban Express',            code: 'RT004', origin: 'Downtown',       destination: 'Suburbs North', distance: 35.8, duration: 55 },
-  ];
+  // Fuel logs
+  await prisma.fuelLog.createMany({ data: [
+    { vehicleId: v1.id, liters: 40, costPerL: 95.5,
+      totalCost: 3820, odometer: 12400, station: 'HP Pump' },
+    { vehicleId: v2.id, liters: 80, costPerL: 96.0,
+      totalCost: 7680, odometer: 45200, station: 'BPCL Pump' },
+    { vehicleId: v1.id, liters: 18, costPerL: 95.5,
+      totalCost: 1719, odometer: 12552 },
+  ]});
 
-  const createdRoutes = [];
-  for (const r of routes) {
-    const rt = await prisma.route.upsert({
-      where: { code: r.code },
-      update: {},
-      create: r,
-    });
-    createdRoutes.push(rt);
-  }
-  console.log('✅ Routes seeded');
+  // Expenses
+  await prisma.expense.createMany({ data: [
+    { vehicleId: v1.id, type: 'TOLL', amount: 540,
+      description: 'Mumbai-Pune expressway toll' },
+    { vehicleId: v2.id, type: 'PARKING', amount: 200,
+      description: 'Overnight parking Delhi' },
+  ]});
 
-  // ── Trips ─────────────────────────────────────────────────────────────
-  const now = new Date();
-  const trips = [
-    {
-      tripNumber: 'TRP-00001',
-      vehicleId: createdVehicles[0].id,
-      driverId: createdDrivers[0].id,
-      routeId: createdRoutes[0].id,
-      status: 'IN_PROGRESS',
-      scheduledStart: new Date(now.getTime() - 30 * 60000),
-      scheduledEnd: new Date(now.getTime() + 15 * 60000),
-      actualStart: new Date(now.getTime() - 30 * 60000),
-      currentLat: 19.076,
-      currentLng: 72.877,
-      passengerCount: 38,
-    },
-    {
-      tripNumber: 'TRP-00002',
-      vehicleId: createdVehicles[1].id,
-      driverId: createdDrivers[1].id,
-      routeId: createdRoutes[1].id,
-      status: 'COMPLETED',
-      scheduledStart: new Date(now.getTime() - 3 * 3600000),
-      scheduledEnd: new Date(now.getTime() - 2.5 * 3600000),
-      actualStart: new Date(now.getTime() - 3 * 3600000),
-      actualEnd: new Date(now.getTime() - 2.5 * 3600000),
-      passengerCount: 42,
-      distance: 15.2,
-    },
-    {
-      tripNumber: 'TRP-00003',
-      vehicleId: createdVehicles[3].id,
-      driverId: createdDrivers[2].id,
-      routeId: createdRoutes[2].id,
-      status: 'SCHEDULED',
-      scheduledStart: new Date(now.getTime() + 2 * 3600000),
-      scheduledEnd: new Date(now.getTime() + 3 * 3600000),
-    },
-  ];
-
-  for (const t of trips) {
-    await prisma.trip.upsert({
-      where: { tripNumber: t.tripNumber },
-      update: {},
-      create: t,
-    });
-  }
-  console.log('✅ Trips seeded');
-
-  // ── Maintenance ───────────────────────────────────────────────────────
-  const maintenance = [
-    {
-      vehicleId: createdVehicles[2].id,
-      type: 'EMERGENCY',
-      status: 'IN_PROGRESS',
-      title: 'Engine Overhaul',
-      description: 'Major engine issue detected — overhaul required',
-      scheduledDate: new Date(),
-      cost: 45000,
-      vendor: 'Force Authorized Service',
-    },
-    {
-      vehicleId: createdVehicles[0].id,
-      type: 'SCHEDULED',
-      status: 'PENDING',
-      title: 'Regular Service',
-      description: '10,000 km service — oil, filters, brakes',
-      scheduledDate: new Date(now.getTime() + 5 * 24 * 3600000),
-      vendor: 'Tata Authorized Centre',
-    },
-  ];
-
-  for (const m of maintenance) {
-    await prisma.maintenance.create({ data: m });
-  }
-  console.log('✅ Maintenance seeded');
-
-  // ── Fuel Logs ─────────────────────────────────────────────────────────
-  for (let i = 0; i < 10; i++) {
-    const veh = createdVehicles[i % createdVehicles.length];
-    const liters = Math.round(Math.random() * 80 + 20);
-    const price = 90 + Math.random() * 10;
-    await prisma.fuelLog.create({
-      data: {
-        vehicleId: veh.id,
-        date: new Date(now.getTime() - i * 2 * 24 * 3600000),
-        liters,
-        pricePerLtr: parseFloat(price.toFixed(2)),
-        totalCost: parseFloat((liters * price).toFixed(2)),
-        odometer: 50000 + i * 1200,
-        station: `Fuel Station ${i + 1}`,
-        fuelType: veh.fuelType,
-      },
-    });
-  }
-  console.log('✅ Fuel logs seeded');
-
-  // ── Expenses ──────────────────────────────────────────────────────────
-  const expenseData = [
-    { category: 'FUEL', amount: 12500, description: 'Monthly fuel reimbursement' },
-    { category: 'MAINTENANCE', amount: 45000, description: 'Engine repair MH12EF9012' },
-    { category: 'INSURANCE', amount: 28000, description: 'Annual insurance renewal' },
-    { category: 'TOLL', amount: 3200, description: 'Highway tolls — July' },
-    { category: 'DRIVER_SALARY', amount: 125000, description: 'July driver salaries' },
-    { category: 'PERMIT', amount: 8500, description: 'Route permit renewal' },
-  ];
-
-  for (const e of expenseData) {
-    await prisma.expense.create({
-      data: { ...e, vehicleId: createdVehicles[0].id, date: new Date() },
-    });
-  }
-  console.log('✅ Expenses seeded');
-
-  // ── Settings ──────────────────────────────────────────────────────────
-  const settings = [
-    { key: 'company_name', value: 'TransitOps Fleet Co.' },
-    { key: 'currency', value: 'INR' },
-    { key: 'timezone', value: 'Asia/Kolkata' },
-    { key: 'fuel_alert_threshold', value: '20' },
-    { key: 'maintenance_alert_days', value: '7' },
-  ];
-
-  for (const s of settings) {
-    await prisma.settings.upsert({
-      where: { key: s.key },
-      update: { value: s.value },
-      create: s,
-    });
-  }
-  console.log('✅ Settings seeded');
-
-  console.log('\n🎉 Database seeded successfully!');
-  console.log('\n📋 Demo credentials:');
-  console.log('   Admin:          admin@transitops.com    / Admin@123');
-  console.log('   Fleet Manager:  fleet@transitops.com   / Fleet@123');
-  console.log('   Dispatcher:     dispatch@transitops.com / Dispatch@123');
-  console.log('   Safety Officer: safety@transitops.com  / Safety@123');
-  console.log('   Finance:        finance@transitops.com / Finance@123');
+  console.log('✅ TransitOps database seeded successfully!');
+  console.log('Fleet Manager:  fleet@transitops.com / Fleet@123');
+  console.log('Dispatcher:     dispatch@transitops.com / Dispatch@123');
+  console.log('Safety Officer: safety@transitops.com / Safety@123');
+  console.log('Finance:        finance@transitops.com / Finance@123');
 }
 
-main()
-  .catch((e) => { console.error(e); process.exit(1); })
-  .finally(() => prisma.$disconnect());
+main().catch(console.error).finally(() => prisma.$disconnect());

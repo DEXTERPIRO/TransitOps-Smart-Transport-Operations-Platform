@@ -1,288 +1,197 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
-// ─────────────────────────────────────────────
-// Enums
-// ─────────────────────────────────────────────
-
-enum UserRole {
-  ADMIN
+enum Role {
   FLEET_MANAGER
   DISPATCHER
   SAFETY_OFFICER
-  FINANCE
-  DRIVER
-}
-
-enum VehicleStatus {
-  ACTIVE
-  INACTIVE
-  MAINTENANCE
-  RETIRED
+  FINANCIAL_ANALYST
 }
 
 enum VehicleType {
-  BUS
-  MINIBUS
   VAN
   TRUCK
+  BUS
+  BIKE
   CAR
 }
 
-enum FuelType {
-  PETROL
-  DIESEL
-  CNG
-  ELECTRIC
-  HYBRID
+enum VehicleStatus {
+  AVAILABLE
+  ON_TRIP
+  IN_SHOP
+  RETIRED
 }
 
 enum DriverStatus {
-  ACTIVE
-  INACTIVE
-  ON_LEAVE
+  AVAILABLE
+  ON_TRIP
+  OFF_DUTY
   SUSPENDED
 }
 
 enum TripStatus {
-  SCHEDULED
-  IN_PROGRESS
+  DRAFT
+  DISPATCHED
   COMPLETED
   CANCELLED
-  DELAYED
 }
 
 enum MaintenanceType {
-  SCHEDULED
-  EMERGENCY
-  INSPECTION
-  REPAIR
+  OIL_CHANGE
+  TYRE_REPLACE
+  ENGINE_REPAIR
+  BRAKE_SERVICE
+  GENERAL_SERVICE
+  OTHER
 }
 
 enum MaintenanceStatus {
-  PENDING
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
+  ACTIVE
+  CLOSED
 }
 
-enum ExpenseCategory {
-  FUEL
-  MAINTENANCE
-  INSURANCE
+enum ExpenseType {
   TOLL
-  DRIVER_SALARY
-  PERMIT
-  MISCELLANEOUS
+  PARKING
+  REPAIR
+  OTHER
 }
-
-// ─────────────────────────────────────────────
-// Models
-// ─────────────────────────────────────────────
 
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  password     String
+  id           String   @id @default(uuid())
   name         String
-  role         UserRole  @default(DISPATCHER)
-  avatar       String?
-  phone        String?
-  isActive     Boolean   @default(true)
-  refreshToken String?
-  lastLoginAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-
-  @@map("users")
+  email        String   @unique
+  password     String
+  role         Role
+  region       String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  trips        Trip[]
 }
 
 model Vehicle {
-  id               String        @id @default(cuid())
-  regNumber        String        @unique
-  make             String
-  model            String
-  year             Int
-  type             VehicleType   @default(BUS)
-  fuelType         FuelType      @default(DIESEL)
-  capacity         Int
-  status           VehicleStatus @default(ACTIVE)
-  color            String?
-  vin              String?       @unique
-  insuranceExpiry  DateTime?
-  permitExpiry     DateTime?
-  lastServiceDate  DateTime?
-  nextServiceDate  DateTime?
+  id               String        @id @default(uuid())
+  registrationNo   String        @unique
+  name             String
+  type             VehicleType
+  maxLoadCapacity  Float
   odometer         Float         @default(0)
-  imageUrl         String?
+  acquisitionCost  Float
+  region           String?
+  status           VehicleStatus @default(AVAILABLE)
+  isActive         Boolean       @default(true)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
-
-  trips        Trip[]
-  maintenance  Maintenance[]
-  fuelLogs     FuelLog[]
-  expenses     Expense[]
-
-  @@map("vehicles")
+  trips            Trip[]
+  maintenanceLogs  MaintenanceLog[]
+  fuelLogs         FuelLog[]
+  expenses         Expense[]
+  documents        VehicleDocument[]
 }
 
 model Driver {
-  id              String       @id @default(cuid())
-  employeeId      String       @unique
+  id              String       @id @default(uuid())
   name            String
-  email           String       @unique
-  phone           String
   licenseNumber   String       @unique
+  licenseCategory String
   licenseExpiry   DateTime
-  dateOfBirth     DateTime?
-  address         String?
-  status          DriverStatus @default(ACTIVE)
-  avatar          String?
-  experience      Int          @default(0)
-  totalTrips      Int          @default(0)
-  rating          Float        @default(5.0)
-  joiningDate     DateTime     @default(now())
+  contactNumber   String
+  safetyScore     Float        @default(100)
+  region          String?
+  status          DriverStatus @default(AVAILABLE)
+  isActive        Boolean      @default(true)
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
-
-  trips Trip[]
-
-  @@map("drivers")
-}
-
-model Route {
-  id          String   @id @default(cuid())
-  name        String
-  code        String   @unique
-  origin      String
-  destination String
-  distance    Float
-  duration    Int      // minutes
-  stops       Json?    // array of waypoints
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  trips Trip[]
-
-  @@map("routes")
+  trips           Trip[]
 }
 
 model Trip {
-  id             String     @id @default(cuid())
-  tripNumber     String     @unique
-  vehicleId      String
-  driverId       String
-  routeId        String?
-  status         TripStatus @default(SCHEDULED)
-  scheduledStart DateTime
-  scheduledEnd   DateTime
-  actualStart    DateTime?
-  actualEnd      DateTime?
-  startOdometer  Float?
-  endOdometer    Float?
-  distance       Float?
-  passengerCount Int?
-  notes          String?
-  currentLat     Float?
-  currentLng     Float?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-
-  vehicle  Vehicle  @relation(fields: [vehicleId], references: [id])
-  driver   Driver   @relation(fields: [driverId], references: [id])
-  route    Route?   @relation(fields: [routeId], references: [id])
-  expenses Expense[]
-
-  @@map("trips")
+  id              String     @id @default(uuid())
+  tripCode        String     @unique
+  source          String
+  destination     String
+  vehicleId       String
+  driverId        String
+  dispatchedById  String
+  cargoWeight     Float
+  plannedDistance Float
+  actualDistance  Float?
+  fuelConsumed    Float?
+  startOdometer   Float?
+  endOdometer     Float?
+  revenue         Float?
+  status          TripStatus @default(DRAFT)
+  scheduledAt     DateTime?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  notes           String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  vehicle         Vehicle    @relation(fields: [vehicleId], references: [id])
+  driver          Driver     @relation(fields: [driverId], references: [id])
+  dispatchedBy    User       @relation(fields: [dispatchedById], references: [id])
 }
 
-model Maintenance {
-  id            String            @id @default(cuid())
+model MaintenanceLog {
+  id            String            @id @default(uuid())
   vehicleId     String
-  type          MaintenanceType   @default(SCHEDULED)
-  status        MaintenanceStatus @default(PENDING)
-  title         String
+  type          MaintenanceType
   description   String?
-  scheduledDate DateTime
-  completedDate DateTime?
-  cost          Float?
-  vendor        String?
-  odometer      Float?
-  partsReplaced String?
-  technicianNote String?
+  cost          Float             @default(0)
+  serviceCenter String?
+  status        MaintenanceStatus @default(ACTIVE)
+  startDate     DateTime          @default(now())
+  endDate       DateTime?
   createdAt     DateTime          @default(now())
   updatedAt     DateTime          @updatedAt
-
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
-
-  @@map("maintenance")
+  vehicle       Vehicle           @relation(fields: [vehicleId], references: [id])
 }
 
 model FuelLog {
-  id          String   @id @default(cuid())
-  vehicleId   String
-  date        DateTime @default(now())
-  liters      Float
-  pricePerLtr Float
-  totalCost   Float
-  odometer    Float
-  station     String?
-  fuelType    FuelType @default(DIESEL)
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
-
-  @@map("fuel_logs")
+  id        String   @id @default(uuid())
+  vehicleId String
+  liters    Float
+  costPerL  Float
+  totalCost Float
+  odometer  Float
+  date      DateTime @default(now())
+  station   String?
+  createdAt DateTime @default(now())
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id])
 }
 
 model Expense {
-  id          String          @id @default(cuid())
+  id          String      @id @default(uuid())
   vehicleId   String?
   tripId      String?
-  category    ExpenseCategory @default(MISCELLANEOUS)
+  type        ExpenseType
   amount      Float
-  date        DateTime        @default(now())
   description String?
-  receipt     String?
-  approvedBy  String?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-
-  vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
-  trip    Trip?    @relation(fields: [tripId], references: [id])
-
-  @@map("expenses")
+  date        DateTime    @default(now())
+  createdAt   DateTime    @default(now())
+  vehicle     Vehicle?    @relation(fields: [vehicleId], references: [id])
 }
 
-model Notification {
-  id        String   @id @default(cuid())
-  userId    String?
-  title     String
-  message   String
-  type      String   @default("info")
-  isRead    Boolean  @default(false)
-  data      Json?
-  createdAt DateTime @default(now())
-
-  @@map("notifications")
+model VehicleDocument {
+  id         String   @id @default(uuid())
+  vehicleId  String
+  name       String
+  fileUrl    String
+  expiryDate DateTime?
+  createdAt  DateTime @default(now())
+  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id])
 }
 
-model Settings {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String
-  updatedAt DateTime @updatedAt
-
-  @@map("settings")
+model SystemSetting {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String
 }
