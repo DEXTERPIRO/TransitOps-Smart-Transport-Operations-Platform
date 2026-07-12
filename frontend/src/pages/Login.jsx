@@ -23,6 +23,7 @@ export default function Login() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const { setAuth, user, theme } = useAuthStore();
   const isDark = theme === 'dark';
   const navigate = useNavigate();
@@ -120,9 +121,8 @@ export default function Login() {
           </div>
         </div>
 
-        <p className={`font-mono text-xs uppercase tracking-wider
-          ${isDark ? 'text-slate-500' : 'text-[var(--text-muted)] opacity-60'}`}>
-          © 2026 TransitOps. Smart Fleet Management.
+        <p style={{ color: '#334155', fontSize: '11px' }}>
+          transitops © 2026 — Smart Fleet Platform
         </p>
       </div>
 
@@ -212,6 +212,29 @@ export default function Login() {
               )}
             </div>
 
+            <div style={{ display: 'flex', alignItems: 'center', 
+                          justifyContent: 'space-between', marginTop: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', 
+                              gap: '8px', fontSize: '13px', color: '#94a3b8',
+                              cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={rememberMe}
+                  onChange={e => setRememberMe(e.target.checked)}
+                  style={{ accentColor: '#22c55e', width: '14px', height: '14px' }}
+                />
+                Remember me
+              </label>
+              <button
+                type="button"
+                onClick={() => toast('Contact your Fleet Manager to reset password.')}
+                style={{ background: 'none', border: 'none', color: '#22c55e',
+                         fontSize: '13px', cursor: 'pointer' }}
+              >
+                Forgot password?
+              </button>
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -224,20 +247,6 @@ export default function Login() {
                 </>
               ) : 'Sign In'}
             </button>
-            
-            <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px' }}>
-              <span style={{ color: '#64748b' }}>Forgot your password? </span>
-              <button
-                type="button"
-                onClick={() => toast('Please contact your Fleet Manager to reset your password.')}
-                style={{
-                  background: 'none', border: 'none', color: '#22c55e',
-                  cursor: 'pointer', fontSize: '13px', textDecoration: 'underline'
-                }}
-              >
-                Get help
-              </button>
-            </p>
           </form>
 
           {/* Demo credentials */}
@@ -263,18 +272,42 @@ export default function Login() {
           </div>
 
           <div style={{
-            marginTop: '12px', padding: '10px 12px',
-            background: 'rgba(34,197,94,0.08)',
-            border: '1px solid rgba(34,197,94,0.2)',
-            borderRadius: '10px', fontSize: '11px', color: '#64748b'
+            marginTop: '20px',
+            padding: '14px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '12px',
+            fontSize: '12px',
+            color: '#64748b'
           }}>
-            <p style={{ fontWeight: '600', color: '#94a3b8', marginBottom: '6px' }}>
-              ROLE ACCESS GUIDE
+            <p style={{ fontWeight: '700', color: '#94a3b8', 
+                        marginBottom: '8px', fontSize: '11px',
+                        letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              Role-based access:
             </p>
-            <p>Fleet Manager — Full access to all modules</p>
-            <p>Dispatcher — Fleet, Drivers, Trips</p>
-            <p>Safety Officer — Dashboard, Drivers</p>
-            <p>Financial Analyst — Dashboard, Fuel, Reports</p>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, 
+                         display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <li style={{ display: 'flex', gap: '8px' }}>
+                <span style={{ color: '#f97316', fontWeight: '600', 
+                               minWidth: '130px' }}>Fleet Manager</span>
+                <span>→ Fleet, Maintenance</span>
+              </li>
+              <li style={{ display: 'flex', gap: '8px' }}>
+                <span style={{ color: '#3b82f6', fontWeight: '600',
+                               minWidth: '130px' }}>Dispatcher</span>
+                <span>→ Dashboard, Trips</span>
+              </li>
+              <li style={{ display: 'flex', gap: '8px' }}>
+                <span style={{ color: '#22c55e', fontWeight: '600',
+                               minWidth: '130px' }}>Safety Officer</span>
+                <span>→ Drivers, Compliance</span>
+              </li>
+              <li style={{ display: 'flex', gap: '8px' }}>
+                <span style={{ color: '#a855f7', fontWeight: '600',
+                               minWidth: '130px' }}>Financial Analyst</span>
+                <span>→ Fuel, Expenses, Analytics</span>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
