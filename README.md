@@ -13,13 +13,11 @@ TransitOps is an enterprise-grade, full-stack fleet management and smart transpo
 
 ## Screenshots
 
-| Page | Screenshot | Page | Screenshot |
-| :--- | :---: | :--- | :---: |
-| **Login Screen** | ![Login Page](assets/screenshots/login.png) | **Operations Dashboard** | ![Operations Dashboard](assets/screenshots/dashboard.png) |
-| **Fleet Management** | ![Fleet Management](assets/screenshots/fleet.png) | **Driver Registry** | ![Driver Registry](assets/screenshots/drivers.png) |
-| **Trip Dispatch Board** | ![Trip Dispatch Board](assets/screenshots/trips.png) | **Maintenance Logs** | ![Maintenance Logs](assets/screenshots/maintenance.png) |
-| **Fuel Logs** | ![Fuel Logs](assets/screenshots/fuel.png) | **Reports & Analytics** | ![Reports & Analytics](assets/screenshots/reports.png) |
-| **System Settings** | ![System Settings](assets/screenshots/settings.png) | | |
+| Page | Screenshot | Page | Screenshot | Page | Screenshot |
+| :--- | :---: | :--- | :---: | :--- | :---: |
+| **Login Screen** | ![Login Page](assets/screenshots/login.png) | **Operations Dashboard** | ![Operations Dashboard](assets/screenshots/dashboard.png) | **Fleet Management** | ![Fleet Management](assets/screenshots/fleet.png) |
+| **Driver Registry** | ![Driver Registry](assets/screenshots/drivers.png) | **Trip Dispatch Board** | ![Trip Dispatch Board](assets/screenshots/trips.png) | **Maintenance Logs** | ![Maintenance Logs](assets/screenshots/maintenance.png) |
+| **Fuel Logs** | ![Fuel Logs](assets/screenshots/fuel.png) | **Reports & Analytics** | ![Reports & Analytics](assets/screenshots/reports.png) | **System Settings** | ![System Settings](assets/screenshots/settings.png) |
 
 ---
 
