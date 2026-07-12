@@ -145,6 +145,26 @@ export default function Trips() {
   const [availableDrivers, setAvailableDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // OSM Nominatim Suggestions state
+  const [sourceSuggestions, setSourceSuggestions] = useState([]);
+  const [destSuggestions, setDestSuggestions] = useState([]);
+  const [sourceLoading, setSourceLoading] = useState(false);
+  const [destLoading, setDestLoading] = useState(false);
+  const [showSourceSuggestions, setShowSourceSuggestions] = useState(false);
+  const [showDestSuggestions, setShowDestSuggestions] = useState(false);
+
+  // Click outside to close suggestions
+  useEffect(() => {
+    const handleOutsideClick = () => {
+      setTimeout(() => {
+        setShowSourceSuggestions(false);
+        setShowDestSuggestions(false);
+      }, 200);
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, []);
+
   // Form state
   const [form, setForm] = useState(EMPTY_FORM);
   const [formErrors, setFormErrors] = useState({});
@@ -193,6 +213,52 @@ export default function Trips() {
     socket.on('trip-status-changed', fetchAll);
     return () => socket.disconnect();
   }, [fetchAll]);
+
+  // Debounced search for Source suggestions (OpenStreetMap Nominatim)
+  useEffect(() => {
+    if (!form.source || form.source.trim().length < 3 || !showSourceSuggestions) {
+      setSourceSuggestions([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setSourceLoading(true);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(form.source)}&limit=5`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setSourceSuggestions(data);
+        }
+      } catch (err) {
+        console.error("OSM Nominatim error:", err);
+      } finally {
+        setSourceLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [form.source, showSourceSuggestions]);
+
+  // Debounced search for Destination suggestions (OpenStreetMap Nominatim)
+  useEffect(() => {
+    if (!form.destination || form.destination.trim().length < 3 || !showDestSuggestions) {
+      setDestSuggestions([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setDestLoading(true);
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(form.destination)}&limit=5`);
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setDestSuggestions(data);
+        }
+      } catch (err) {
+        console.error("OSM Nominatim error:", err);
+      } finally {
+        setDestLoading(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [form.destination, showDestSuggestions]);
 
   // ─── Form ──────────────────────────────────────────────────────────────────
   const handleFormChange = (field, value) => {
@@ -311,22 +377,74 @@ export default function Trips() {
 
           <form onSubmit={handleCreateTrip} className="space-y-3">
             {/* Source / Destination */}
-            <Field label="Source *" error={formErrors.source}>
-              <input
-                value={form.source}
-                onChange={e => handleFormChange('source', e.target.value)}
-                placeholder="e.g. Mumbai Warehouse"
-                className={inputCls(formErrors.source)}
-              />
-            </Field>
-            <Field label="Destination *" error={formErrors.destination}>
-              <input
-                value={form.destination}
-                onChange={e => handleFormChange('destination', e.target.value)}
-                placeholder="e.g. Pune Distribution"
-                className={inputCls(formErrors.destination)}
-              />
-            </Field>
+            {/* Source / Destination */}
+            <div className="relative">
+              <Field label="Source *" error={formErrors.source}>
+                <input
+                  value={form.source}
+                  onChange={e => {
+                    handleFormChange('source', e.target.value);
+                    setShowSourceSuggestions(true);
+                  }}
+                  onFocus={() => setShowSourceSuggestions(true)}
+                  placeholder="e.g. Mumbai Warehouse"
+                  className={inputCls(formErrors.source)}
+                />
+              </Field>
+              {showSourceSuggestions && (sourceSuggestions.length > 0 || sourceLoading) && (
+                <div className="absolute z-30 w-full bg-[var(--foreground)] border border-[var(--border-color)] rounded-xl shadow-[var(--shadow-floating)] max-h-48 overflow-y-auto mt-1">
+                  {sourceLoading && (
+                    <div className="p-3 text-xs text-text-sub font-mono">Searching locations...</div>
+                  )}
+                  {!sourceLoading && sourceSuggestions.map((item, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        handleFormChange('source', item.display_name);
+                        setShowSourceSuggestions(false);
+                      }}
+                      className="p-2.5 text-xs text-text-main hover:bg-[var(--accent)]/10 cursor-pointer truncate border-b last:border-0 border-black/10 dark:border-white/5 font-mono"
+                    >
+                      {item.display_name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <Field label="Destination *" error={formErrors.destination}>
+                <input
+                  value={form.destination}
+                  onChange={e => {
+                    handleFormChange('destination', e.target.value);
+                    setShowDestSuggestions(true);
+                  }}
+                  onFocus={() => setShowDestSuggestions(true)}
+                  placeholder="e.g. Pune Distribution"
+                  className={inputCls(formErrors.destination)}
+                />
+              </Field>
+              {showDestSuggestions && (destSuggestions.length > 0 || destLoading) && (
+                <div className="absolute z-30 w-full bg-[var(--foreground)] border border-[var(--border-color)] rounded-xl shadow-[var(--shadow-floating)] max-h-48 overflow-y-auto mt-1">
+                  {destLoading && (
+                    <div className="p-3 text-xs text-text-sub font-mono">Searching locations...</div>
+                  )}
+                  {!destLoading && destSuggestions.map((item, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        handleFormChange('destination', item.display_name);
+                        setShowDestSuggestions(false);
+                      }}
+                      className="p-2.5 text-xs text-text-main hover:bg-[var(--accent)]/10 cursor-pointer truncate border-b last:border-0 border-black/10 dark:border-white/5 font-mono"
+                    >
+                      {item.display_name}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Vehicle selector */}
             <Field label="Vehicle *" error={formErrors.vehicleId}>
