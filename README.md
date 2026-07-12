@@ -19,6 +19,21 @@ TransitOps is an enterprise-grade, full-stack fleet management and smart transpo
 ### Operations Dashboard
 ![Operations Dashboard](assets/screenshots/dashboard.png)
 
+### Fleet Management
+![Fleet Management](assets/screenshots/fleet.png)
+
+### Driver Registry
+![Driver Registry](assets/screenshots/drivers.png)
+
+### Trip Dispatch Board
+![Trip Dispatch Board](assets/screenshots/trips.png)
+
+### Maintenance Logs
+![Maintenance Logs](assets/screenshots/maintenance.png)
+
+### Fuel Logs
+![Fuel Logs](assets/screenshots/fuel.png)
+
 ### Reports & Analytics
 ![Reports & Analytics](assets/screenshots/reports.png)
 
