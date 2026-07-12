@@ -62,9 +62,11 @@ TransitOps is an enterprise-grade, full-stack fleet management and smart transpo
 
 ---
 
-## Technical Architecture
+### Technical Architecture
 
-The application enforces strict separation of concerns, separating the client layout engine from the backend data access controllers.
+The platform is designed around a decoupled, service-oriented client-server architecture. The diagrams below illustrate the system boundary layers, sequence flows, and event orchestration pipelines.
+
+### System Boundary Layers
 
 ```
 +---------------------------------------------------------------------------------+
@@ -83,6 +85,66 @@ The application enforces strict separation of concerns, separating the client la
 |                                PostgreSQL DB                                    |
 |  [Users Table] ◄──► [Vehicles] ◄──► [Drivers] ◄──► [Trips] ◄──► [Maintenance]   |
 +---------------------------------------------------------------------------------+
+```
+
+### 1. Authentication & JWT Session Lifecycle
+
+The backend manages state-free authorization using token pairs. Access tokens are passed via HTTP headers, while refresh tokens are secured in HttpOnly cookies:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Operations Agent
+    participant Client as React Client (Memory)
+    participant Server as Express Server
+    participant DB as PostgreSQL DB
+
+    User->>Client: Enter Email & Password
+    Client->>Server: POST /api/auth/login
+    Server->>DB: Query User Record & Verify Password Hash
+    DB-->>Server: Return User Data (Role Match)
+    Server-->>Client: Set HttpOnly Cookie (Refresh Token) & JSON Body (Access Token)
+    Note over Client: Save Access Token in Memory (State)
+    Client->>Server: HTTP Request (Headers: Bearer Access Token)
+    Server-->>Client: Access Granted (200 OK)
+```
+
+### 2. Trip Dispatch & State Management Lifecycle
+
+Active trips progress through structured validation checks before updates are emitted to the fleet:
+
+```mermaid
+graph TD
+    A["Draft Trip Created"] --> B{"Dispatch Clicked"}
+    B --> C{"Check Driver Status"}
+    B --> D{"Check Vehicle Status"}
+    C -- "Suspended or Expired" --> E["Dispatch Rejected"]
+    D -- "In Shop or Retired" --> E
+    C -- "Available" --> F{"Create Dispatch Event"}
+    D -- "Available" --> F
+    F --> G["Prisma DB Transaction: Update Status to DISPATCHED"]
+    G --> H["Socket.io: Broadcast Alert to Room 'trip-{id}'"]
+    H --> I["Dashboard Telemetry Active"]
+```
+
+### 3. Real-Time Telemetry Pipeline
+
+Real-time telemetry coordinates are pushed instantly to dispatcher maps via Socket.io channels:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Agent as Dispatcher Client
+    participant Server as Socket.io Server
+    participant Channel as Room: dashboard
+    participant DB as Prisma PostgreSQL
+
+    Agent->>Server: Connect and join "dashboard" room
+    Server-->>Agent: Connection Established
+    Note over Server: Active dispatch triggers status update
+    Server->>DB: Write Odometer / Location telemetry
+    Server->>Channel: Emit status update to room
+    Channel-->>Agent: React client state updates, re-rendering Leaflet Map Marker
 ```
 
 ---
