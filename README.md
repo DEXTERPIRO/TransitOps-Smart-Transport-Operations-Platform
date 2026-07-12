@@ -11,6 +11,20 @@
 
 TransitOps is an enterprise-grade, full-stack fleet management and smart transport operations platform designed to optimize vehicle logistics, driver compliance, route scheduling, predictive maintenance, and real-time operations telemetry. It provides operations teams with a single pane of glass to oversee complex transport environments.
 
+## Screenshots
+
+### Login Page
+![Login Page](assets/screenshots/login.png)
+
+### Operations Dashboard
+![Operations Dashboard](assets/screenshots/dashboard.png)
+
+### Reports & Analytics
+![Reports & Analytics](assets/screenshots/reports.png)
+
+### System Settings
+![System Settings](assets/screenshots/settings.png)
+
 ---
 
 ## Technical Architecture
