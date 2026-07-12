@@ -40,14 +40,14 @@ Copy `backend/.env.example` to `backend/.env` and fill in your values.
 ## Features
 
 - 🚌 **Fleet Management** — track vehicles, status, assignments
-- 👨‍✈️ **Driver Management** — profiles, licenses, schedules
-- 🗺️ **Trip Tracking** — live GPS with Leaflet maps
-- 🔧 **Maintenance** — service logs, reminders
-- ⛽ **Fuel Logs** — consumption analytics
-- 💸 **Expenses** — cost tracking & categorisation
-- 📊 **Reports** — PDF export, charts
-- 🤖 **AI Assistant** — Anthropic-powered insights
-- 🔔 **Real-time** — Socket.io live updates
+- 👨‍✈️ **Driver Management** — profiles, licenses, safety score tracking, and auto-dispatch validation
+- 🗺️ **Trip Tracking** — live GPS with Leaflet maps and interactive dispatch board
+- 🔧 **Maintenance** — service logs, reminders, and predictive service alerts based on odometer tracking
+- ⛽ **Fuel Logs** — consumption analytics and live cost calculation
+- 💸 **Expenses** — cost tracking & categorization
+- 📊 **Reports** — PDF/CSV export,Monthly Revenue and top vehicle ROI charts
+- 🤖 **AI Assistant** — Claude-powered conversational agent accessing real-time fleet databases
+- 🔔 **Real-time** — Socket.io live updates for instant dashboard refreshes
 
 ## Tech Stack
 
