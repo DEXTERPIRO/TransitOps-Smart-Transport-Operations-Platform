@@ -55,6 +55,12 @@ export const dashboardAPI = {
   getMaintenanceAlerts: () => api.get('/dashboard/maintenance-alerts'),
 };
 
+export const settingsAPI = {
+  getUsers: () => api.get('/settings/users'),
+  createUser: (data) => api.post('/settings/users', data),
+  updateUser: (id, data) => api.put(`/settings/users/${id}/toggle`, data),
+};
+
 export const reportsAPI = {
   getAnalytics: (params) => api.get('/reports/analytics', { params }),
   exportCSV: (type) => api.get(`/reports/export/csv?type=${type}`,
