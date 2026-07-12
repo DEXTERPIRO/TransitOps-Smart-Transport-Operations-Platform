@@ -6,6 +6,9 @@ export const authAPI = {
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
   forgotPassword: (data) => api.post('/auth/forgot-password', data),
+  sendOTP: (data) => api.post('/auth/send-otp', data),
+  verifyOTP: (data) => api.post('/auth/verify-otp', data),
+  resetPasswordOTP: (data) => api.post('/auth/reset-password-otp', data),
 };
 
 export const vehiclesAPI = {

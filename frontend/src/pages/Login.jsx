@@ -25,6 +25,14 @@ export default function Login() {
   const [showPass, setShowPass] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const { setAuth, user, theme } = useAuthStore();
+
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotStep, setForgotStep] = useState(1);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotOtp, setForgotOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
   const isDark = theme === 'dark';
   const navigate = useNavigate();
 
@@ -228,18 +236,13 @@ export default function Login() {
               </label>
               <button
                 type="button"
-                onClick={async () => {
-                  if (!form.email.trim()) {
-                    toast.error('Please enter your email address first.');
-                    return;
-                  }
-                  const loadingToast = toast.loading('Sending reset request...');
-                  try {
-                    await authAPI.forgotPassword({ email: form.email });
-                    toast.success('Temporary password has been sent to your email!', { id: loadingToast });
-                  } catch (err) {
-                    toast.error(err.error || 'Failed to send reset email.', { id: loadingToast });
-                  }
+                onClick={() => {
+                  setForgotEmail(form.email);
+                  setForgotOtp('');
+                  setNewPassword('');
+                  setConfirmPassword('');
+                  setForgotStep(1);
+                  setForgotOpen(true);
                 }}
                 style={{ background: 'none', border: 'none', color: '#22c55e',
                          fontSize: '13px', cursor: 'pointer' }}
@@ -324,6 +327,180 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {forgotOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-[var(--foreground)] border border-[var(--border-color)] rounded-3xl p-8 shadow-[var(--shadow-floating)] relative">
+            <button
+              type="button"
+              onClick={() => setForgotOpen(false)}
+              className="absolute right-4 top-4 text-text-sub hover:text-text-main font-bold font-mono text-lg"
+            >
+              ✕
+            </button>
+            <h3 className="text-xl font-bold font-mono text-text-main mb-2">
+              Reset Password
+            </h3>
+            <p className="text-xs font-mono text-text-sub mb-6 uppercase tracking-wider">
+              Step {forgotStep} of 3
+            </p>
+
+            {forgotStep === 1 && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={e => setForgotEmail(e.target.value)}
+                    placeholder="you@transitops.com"
+                    className="input border border-[var(--border-color)]"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={forgotLoading}
+                  onClick={async () => {
+                    if (!forgotEmail.trim()) {
+                      toast.error('Email is required');
+                      return;
+                    }
+                    setForgotLoading(true);
+                    try {
+                      await authAPI.sendOTP({ email: forgotEmail });
+                      toast.success('OTP code sent to your email.');
+                      setForgotStep(2);
+                    } catch (err) {
+                      toast.error(err.message || err.error || 'Failed to send OTP.');
+                    } finally {
+                      setForgotLoading(false);
+                    }
+                  }}
+                  className="btn-primary w-full py-3"
+                >
+                  {forgotLoading ? 'Sending...' : 'Send OTP'}
+                </button>
+              </div>
+            )}
+
+            {forgotStep === 2 && (
+              <div className="space-y-4">
+                <p className="text-xs text-text-sub font-mono">
+                  Enter the 6-digit verification code sent to {forgotEmail}
+                </p>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">
+                    Verification OTP
+                  </label>
+                  <input
+                    type="text"
+                    value={forgotOtp}
+                    onChange={e => setForgotOtp(e.target.value)}
+                    placeholder="123456"
+                    maxLength={6}
+                    className="input border border-[var(--border-color)] tracking-[6px] text-center font-bold"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setForgotStep(1)}
+                    className="btn border border-[var(--border-color)] flex-1 py-3 text-text-main font-mono text-xs uppercase"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    disabled={forgotLoading}
+                    onClick={async () => {
+                      if (forgotOtp.trim().length !== 6) {
+                        toast.error('Enter valid 6-digit OTP code');
+                        return;
+                      }
+                      setForgotLoading(true);
+                      try {
+                        await authAPI.verifyOTP({ email: forgotEmail, otp: forgotOtp });
+                        toast.success('OTP code verified successfully.');
+                        setForgotStep(3);
+                      } catch (err) {
+                        toast.error(err.message || err.error || 'Invalid OTP code.');
+                      } finally {
+                        setForgotLoading(false);
+                      }
+                    }}
+                    className="btn-primary flex-1 py-3"
+                  >
+                    {forgotLoading ? 'Verifying...' : 'Verify OTP'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {forgotStep === 3 && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">
+                    New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="input border border-[var(--border-color)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">
+                    Confirm New Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className="input border border-[var(--border-color)]"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={forgotLoading}
+                  onClick={async () => {
+                    if (newPassword.length < 6) {
+                      toast.error('Password must be at least 6 characters');
+                      return;
+                    }
+                    if (newPassword !== confirmPassword) {
+                      toast.error('Passwords do not match');
+                      return;
+                    }
+                    setForgotLoading(true);
+                    try {
+                      await authAPI.resetPasswordOTP({
+                        email: forgotEmail,
+                        otp: forgotOtp,
+                        newPassword
+                      });
+                      toast.success('Password reset successfully. You can now log in.');
+                      setForgotOpen(false);
+                    } catch (err) {
+                      toast.error(err.message || err.error || 'Failed to reset password.');
+                    } finally {
+                      setForgotLoading(false);
+                    }
+                  }}
+                  className="btn-primary w-full py-3"
+                >
+                  {forgotLoading ? 'Saving...' : 'Reset Password'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
