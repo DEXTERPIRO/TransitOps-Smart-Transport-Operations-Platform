@@ -13,11 +13,59 @@ TransitOps is an enterprise-grade, full-stack fleet management and smart transpo
 
 ## Screenshots
 
-| Page | Screenshot | Page | Screenshot | Page | Screenshot |
-| :--- | :---: | :--- | :---: | :--- | :---: |
-| **Login Screen** | ![Login Page](assets/screenshots/login.png) | **Operations Dashboard** | ![Operations Dashboard](assets/screenshots/dashboard.png) | **Fleet Management** | ![Fleet Management](assets/screenshots/fleet.png) |
-| **Driver Registry** | ![Driver Registry](assets/screenshots/drivers.png) | **Trip Dispatch Board** | ![Trip Dispatch Board](assets/screenshots/trips.png) | **Maintenance Logs** | ![Maintenance Logs](assets/screenshots/maintenance.png) |
-| **Fuel Logs** | ![Fuel Logs](assets/screenshots/fuel.png) | **Reports & Analytics** | ![Reports & Analytics](assets/screenshots/reports.png) | **System Settings** | ![System Settings](assets/screenshots/settings.png) |
+<details>
+  <summary><strong>Login Screen (Click to expand)</strong></summary>
+  <br/>
+  <img src="assets/screenshots/login.png" alt="Login Screen" width="100%"/>
+</details>
+
+<details>
+  <summary><strong>Operations Dashboard (Click to expand)</strong></summary>
+  <br/>
+  <img src="assets/screenshots/dashboard.png" alt="Operations Dashboard" width="100%"/>
+</details>
+
+<details>
+  <summary><strong>Fleet Management (Click to expand)</strong></summary>
+  <br/>
+  <img src="assets/screenshots/fleet.png" alt="Fleet Management" width="100%"/>
+</details>
+
+<details>
+  <summary><strong>Driver Registry & Compliance (Click to expand)</strong></summary>
+  <br/>
+  <img src="assets/screenshots/drivers.png" alt="Driver Registry" width="100%"/>
+</details>
+
+<details>
+  <summary><strong>Trip Dispatch Board (Click to expand)</strong></summary>
+  <br/>
+  <img src="assets/screenshots/trips.png" alt="Trip Dispatch Board" width="100%"/>
+</details>
+
+<details>
+  <summary><strong>Maintenance Service Logs (Click to expand)</strong></summary>
+  <br/>
+  <img src="assets/screenshots/maintenance.png" alt="Maintenance Logs" width="100%"/>
+</details>
+
+<details>
+  <summary><strong>Fuel Log Tracker (Click to expand)</strong></summary>
+  <br/>
+  <img src="assets/screenshots/fuel.png" alt="Fuel Logs" width="100%"/>
+</details>
+
+<details>
+  <summary><strong>Reports & Analytics (Click to expand)</strong></summary>
+  <br/>
+  <img src="assets/screenshots/reports.png" alt="Reports & Analytics" width="100%"/>
+</details>
+
+<details>
+  <summary><strong>System Settings (Click to expand)</strong></summary>
+  <br/>
+  <img src="assets/screenshots/settings.png" alt="System Settings" width="100%"/>
+</details>
 
 ---
 
