@@ -134,6 +134,33 @@ function TripCard({ trip, isDark, onDispatch, onComplete, onCancel, onView }) {
   );
 }
 
+const estimateRouteDistance = async (lat1, lon1, lat2, lon2) => {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code === 'Ok' && data.routes && data.routes[0]) {
+      const distanceKm = Math.round(data.routes[0].distance / 1000);
+      return distanceKm;
+    }
+  } catch (err) {
+    console.error("OSM Routing API error, falling back to Haversine:", err);
+  }
+
+  // Haversine formula fallback
+  const R = 6371; // Earth's radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const directDistance = R * c;
+
+  return Math.round(directDistance * 1.25);
+};
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function Trips() {
   const { theme } = useAuthStore();
@@ -152,6 +179,8 @@ export default function Trips() {
   const [destLoading, setDestLoading] = useState(false);
   const [showSourceSuggestions, setShowSourceSuggestions] = useState(false);
   const [showDestSuggestions, setShowDestSuggestions] = useState(false);
+  const [sourceCoords, setSourceCoords] = useState(null);
+  const [destCoords, setDestCoords] = useState(null);
 
   // Click outside to close suggestions
   useEffect(() => {
@@ -164,6 +193,24 @@ export default function Trips() {
     document.addEventListener('click', handleOutsideClick);
     return () => document.removeEventListener('click', handleOutsideClick);
   }, []);
+
+  // Auto-estimate distance when both source & destination coords are selected
+  useEffect(() => {
+    if (!sourceCoords || !destCoords) return;
+    const calculate = async () => {
+      const distance = await estimateRouteDistance(
+        sourceCoords.lat,
+        sourceCoords.lon,
+        destCoords.lat,
+        destCoords.lon
+      );
+      if (distance > 0) {
+        handleFormChange('plannedDistance', distance.toString());
+        toast.success(`Estimated route distance: ${distance} km`);
+      }
+    };
+    calculate();
+  }, [sourceCoords, destCoords]);
 
   // Form state
   const [form, setForm] = useState(EMPTY_FORM);
@@ -385,6 +432,7 @@ export default function Trips() {
                   onChange={e => {
                     handleFormChange('source', e.target.value);
                     setShowSourceSuggestions(true);
+                    setSourceCoords(null);
                   }}
                   onFocus={() => setShowSourceSuggestions(true)}
                   placeholder="e.g. Mumbai Warehouse"
@@ -401,6 +449,7 @@ export default function Trips() {
                       key={idx}
                       onClick={() => {
                         handleFormChange('source', item.display_name);
+                        setSourceCoords({ lat: parseFloat(item.lat), lon: parseFloat(item.lon) });
                         setShowSourceSuggestions(false);
                       }}
                       className="p-2.5 text-xs text-text-main hover:bg-[var(--accent)]/10 cursor-pointer truncate border-b last:border-0 border-black/10 dark:border-white/5 font-mono"
@@ -419,6 +468,7 @@ export default function Trips() {
                   onChange={e => {
                     handleFormChange('destination', e.target.value);
                     setShowDestSuggestions(true);
+                    setDestCoords(null);
                   }}
                   onFocus={() => setShowDestSuggestions(true)}
                   placeholder="e.g. Pune Distribution"
@@ -435,6 +485,7 @@ export default function Trips() {
                       key={idx}
                       onClick={() => {
                         handleFormChange('destination', item.display_name);
+                        setDestCoords({ lat: parseFloat(item.lat), lon: parseFloat(item.lon) });
                         setShowDestSuggestions(false);
                       }}
                       className="p-2.5 text-xs text-text-main hover:bg-[var(--accent)]/10 cursor-pointer truncate border-b last:border-0 border-black/10 dark:border-white/5 font-mono"
