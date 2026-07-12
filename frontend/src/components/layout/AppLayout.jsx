@@ -30,10 +30,10 @@ const NAV_ITEMS = [
 ];
 
 const ROLE_COLORS = {
-  FLEET_MANAGER: 'bg-orange-500/20 text-orange-400',
-  DISPATCHER: 'bg-blue-500/20 text-blue-400',
-  SAFETY_OFFICER: 'bg-green-500/20 text-green-400',
-  FINANCIAL_ANALYST: 'bg-purple-500/20 text-purple-400',
+  FLEET_MANAGER: 'bg-orange-500/10 text-orange-500 dark:text-orange-400 border border-orange-500/20',
+  DISPATCHER: 'bg-blue-500/10 text-blue-500 dark:text-blue-400 border border-blue-500/20',
+  SAFETY_OFFICER: 'bg-green-500/10 text-green-500 dark:text-green-400 border border-green-500/20',
+  FINANCIAL_ANALYST: 'bg-purple-500/10 text-purple-500 dark:text-purple-400 border border-purple-500/20',
 };
 
 const ROLE_LABELS = {
@@ -63,8 +63,7 @@ export default function AppLayout() {
   const isDark = theme === 'dark';
 
   return (
-    <div className={`flex h-screen overflow-hidden
-      ${isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'}`}>
+    <div className="flex h-screen overflow-hidden bg-[var(--background)] text-[var(--text-primary)] transition-all">
 
       {/* Mobile overlay */}
       {sidebarOpen && (
@@ -77,28 +76,23 @@ export default function AppLayout() {
       {/* SIDEBAR */}
       <aside className={`
         fixed lg:static inset-y-0 left-0 z-50
-        w-64 flex flex-col border-r transition-transform duration-300
+        w-64 flex flex-col transition-transform duration-300
+        bg-[var(--background)] border-r border-black/10 dark:border-white/5 shadow-[var(--shadow-card)]
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        ${isDark
-          ? 'bg-slate-900 border-slate-800'
-          : 'bg-white border-slate-200'}
       `}>
 
         {/* Logo */}
-        <div className={`p-6 border-b flex items-center justify-between
-          ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+        <div className="p-6 border-b border-black/10 dark:border-white/5 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-orange-500 rounded-lg
-                              flex items-center justify-center">
+              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center shadow-[var(--shadow-sharp)]">
                 <Truck size={16} className="text-white" />
               </div>
-              <span className="text-lg font-bold font-mono tracking-wider">
+              <span className="text-base font-extrabold font-mono tracking-wider text-[var(--text-primary)]">
                 TRANSITOPS
               </span>
             </div>
-            <p className={`text-xs mt-0.5
-              ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+            <p className="text-[10px] uppercase font-mono font-bold tracking-wider mt-1 text-[var(--text-muted)]">
               Smart Fleet Platform
             </p>
           </div>
@@ -111,17 +105,14 @@ export default function AppLayout() {
         </div>
 
         {/* User info */}
-        <div className={`px-4 py-3 border-b
-          ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+        <div className="px-4 py-4 border-b border-black/10 dark:border-white/5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-orange-500/20
-                            border border-orange-500/30 flex items-center
-                            justify-center text-orange-400 font-bold text-sm">
+            <div className="w-9 h-9 rounded-full bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-500 dark:text-orange-400 font-bold text-sm shadow-[var(--shadow-sharp)]">
               {user?.name?.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <p className="font-medium text-sm truncate">{user?.name}</p>
-              <span className={`text-xs px-2 py-0.5 rounded-full font-medium
+              <p className="font-bold text-sm truncate text-[var(--text-primary)]">{user?.name}</p>
+              <span className={`text-[10px] uppercase font-mono px-2 py-0.5 rounded-full font-bold
                 ${ROLE_COLORS[user?.role]}`}>
                 {ROLE_LABELS[user?.role]}
               </span>
@@ -130,63 +121,70 @@ export default function AppLayout() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
           {allowedNav.map(item => (
             <NavLink
               key={item.to}
               to={item.to}
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => `
-                flex items-center gap-3 px-3 py-2.5 rounded-xl
-                text-sm font-medium transition-all group
+                flex items-center gap-3 px-3.5 py-2.5 rounded-xl
+                text-xs uppercase font-mono font-bold tracking-wider transition-all group
                 ${isActive
-                  ? 'bg-orange-500 text-white shadow-lg shadow-orange-500/20'
-                  : isDark
-                    ? 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-[var(--accent)] text-white shadow-[var(--shadow-sharp)] active:translate-y-[1px]'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--foreground)] hover:shadow-[var(--shadow-card)]'
                 }
               `}
             >
-              <item.icon size={18} />
+              <item.icon size={16} />
               <span>{item.label}</span>
-              <ChevronRight size={14} className="ml-auto opacity-0
+              <ChevronRight size={12} className="ml-auto opacity-0
                 group-hover:opacity-100 transition-opacity" />
             </NavLink>
           ))}
         </nav>
 
         {/* Bottom actions */}
-        <div className={`p-4 border-t space-y-2
-          ${isDark ? 'border-slate-800' : 'border-slate-200'}`}>
+        <div className="p-4 border-t border-black/10 dark:border-white/5 space-y-3">
+          {/* AI Assistant Button */}
           <button
             onClick={() => setShowAI(!showAI)}
-            className={`w-full flex items-center gap-3 px-3 py-2.5
-                        rounded-xl text-sm font-medium transition-all
-                        ${isDark
-                          ? 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                          : 'text-slate-600 hover:bg-slate-100'}`}
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs uppercase font-mono font-bold tracking-wider transition-all
+                       bg-[var(--background)] shadow-[var(--shadow-card)] active:shadow-[var(--shadow-pressed)] text-[var(--text-primary)] hover:text-purple-400"
           >
-            <Bot size={18} className="text-purple-400" />
+            <Bot size={16} className="text-purple-400" />
             <span>AI Assistant</span>
           </button>
-          <button
-            onClick={toggleTheme}
-            className={`w-full flex items-center gap-3 px-3 py-2.5
-                        rounded-xl text-sm font-medium transition-all
-                        ${isDark
-                          ? 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                          : 'text-slate-600 hover:bg-slate-100'}`}
-          >
-            {isDark ? <Sun size={18} /> : <Moon size={18} />}
-            <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
-          </button>
+
+          {/* Physical Rocker Theme Toggle Switch */}
+          <div className="flex flex-col gap-1.5 pt-1">
+            <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--text-muted)] opacity-60">
+              THEME CHASSIS
+            </span>
+            <button
+              onClick={toggleTheme}
+              className="w-full h-8 rounded-full bg-[var(--muted)] shadow-[var(--shadow-recessed)] relative flex items-center p-1 focus:outline-none"
+            >
+              <div
+                className={`w-6 h-6 rounded-full bg-[var(--background)] shadow-[var(--shadow-floating)] flex items-center justify-center transition-all duration-300 absolute
+                  ${isDark ? 'left-[calc(100%-1.75rem)]' : 'left-1'}`}
+              >
+                {isDark ? <Moon size={12} className="text-purple-400" /> : <Sun size={12} className="text-amber-500" />}
+              </div>
+              <span className={`absolute text-[8px] font-mono font-bold uppercase tracking-wider pointer-events-none transition-all duration-300
+                ${isDark ? 'left-3 text-[var(--text-muted)]' : 'right-3 text-[var(--text-muted)]'}`}>
+                {isDark ? 'DARK MODE' : 'LIGHT MODE'}
+              </span>
+            </button>
+          </div>
+
+          {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2.5
-                       rounded-xl text-sm font-medium text-red-400
-                       hover:bg-red-500/10 transition-all"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs uppercase font-mono font-bold tracking-wider transition-all
+                       bg-[var(--background)] shadow-[var(--shadow-card)] active:shadow-[var(--shadow-pressed)] text-red-500 hover:text-red-400"
           >
-            <LogOut size={18} />
+            <LogOut size={16} />
             <span>Logout</span>
           </button>
         </div>
@@ -196,33 +194,22 @@ export default function AppLayout() {
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* Top bar */}
-        <header className={`h-14 flex items-center justify-between
-                            px-4 lg:px-6 border-b flex-shrink-0
-          ${isDark
-            ? 'bg-slate-900 border-slate-800'
-            : 'bg-white border-slate-200'}`}>
+        <header className="h-14 flex items-center justify-between px-4 lg:px-6 border-b border-black/10 dark:border-white/5 flex-shrink-0 bg-[var(--background)]">
           <button
             onClick={() => setSidebarOpen(true)}
-            className={`lg:hidden p-2 rounded-lg
-              ${isDark
-                ? 'text-slate-400 hover:bg-slate-800'
-                : 'text-slate-600 hover:bg-slate-100'}`}
+            className="lg:hidden p-2 rounded-lg text-[var(--text-muted)] hover:bg-[var(--foreground)]"
           >
             <Menu size={20} />
           </button>
 
           <div className="flex items-center gap-2 ml-auto">
             {/* Live status dot */}
-            <div className="flex items-center gap-2 text-xs font-mono
-                            text-green-400">
-              <div className="w-2 h-2 bg-green-400 rounded-full
-                              animate-pulse" />
+            <div className="flex items-center gap-2 text-[10px] font-mono font-bold tracking-wider text-green-500 dark:text-green-400">
+              <div className="w-2.5 h-2.5 bg-green-500 dark:bg-green-400 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]" />
               LIVE
             </div>
-            <div className={`h-6 w-px mx-2
-              ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
-            <div className={`text-xs font-mono
-              ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <div className="h-6 w-px mx-2 bg-black/10 dark:bg-white/5" />
+            <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--text-muted)]">
               {new Date().toLocaleDateString('en-IN',
                 { weekday: 'short', day: '2-digit',
                   month: 'short', year: 'numeric' })}
@@ -231,7 +218,7 @@ export default function AppLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-[var(--background)]">
           <Outlet />
         </main>
       </div>

@@ -9,27 +9,34 @@ export default function Modal({ isOpen, onClose, title, children, size = 'md' })
 
   const sizes = { sm: 'max-w-md', md: 'max-w-lg', lg: 'max-w-2xl', xl: 'max-w-4xl' };
 
+  const screwBg = isDark
+    ? 'radial-gradient(circle at 12px 12px, rgba(0,0,0,0.5) 1.5px, transparent 2px), radial-gradient(circle at calc(100% - 12px) 12px, rgba(0,0,0,0.5) 1.5px, transparent 2px)'
+    : 'radial-gradient(circle at 12px 12px, rgba(0,0,0,0.15) 1.5px, transparent 2px), radial-gradient(circle at calc(100% - 12px) 12px, rgba(0,0,0,0.15) 1.5px, transparent 2px)';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+      {/* Recessed backdrop */}
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"
            onClick={onClose} />
-      <div className={`relative w-full ${sizes[size]} rounded-2xl border
-                       shadow-2xl max-h-[90vh] overflow-y-auto
-        ${isDark
-          ? 'bg-slate-900 border-slate-700'
-          : 'bg-white border-slate-200'}`}>
-        <div className={`flex items-center justify-between p-5 border-b
-          ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
-          <h3 className="font-semibold text-base">{title}</h3>
+      
+      {/* Tactile Panel */}
+      <div 
+        style={{ backgroundImage: screwBg }}
+        className={`relative w-full ${sizes[size]} rounded-2xl border border-transparent shadow-[var(--shadow-floating)] max-h-[90vh] overflow-y-auto bg-[var(--background)] text-[var(--text-primary)] transition-all pt-4`}>
+        
+        {/* Modal Header */}
+        <div className="flex items-center justify-between px-6 pb-4 border-b border-black/10 dark:border-white/5">
+          <h3 className="font-bold text-sm uppercase font-mono tracking-wider text-[var(--text-primary)]">
+            {title}
+          </h3>
           <button onClick={onClose}
-            className={`p-1.5 rounded-lg transition
-              ${isDark
-                ? 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                : 'text-slate-500 hover:bg-slate-100'}`}>
-            <X size={18} />
+            className="p-1.5 rounded-lg bg-[var(--background)] shadow-[var(--shadow-card)] active:shadow-[var(--shadow-pressed)] text-slate-400 hover:text-[var(--accent)] transition-all">
+            <X size={16} />
           </button>
         </div>
-        <div className="p-5">{children}</div>
+
+        {/* Modal Body */}
+        <div className="p-6">{children}</div>
       </div>
     </div>
   );
