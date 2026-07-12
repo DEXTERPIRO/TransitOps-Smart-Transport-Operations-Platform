@@ -5,6 +5,7 @@ export const authAPI = {
   refresh: () => api.post('/auth/refresh'),
   logout: () => api.post('/auth/logout'),
   me: () => api.get('/auth/me'),
+  forgotPassword: (data) => api.post('/auth/forgot-password', data),
 };
 
 export const vehiclesAPI = {

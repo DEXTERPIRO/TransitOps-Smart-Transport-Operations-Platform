@@ -24,14 +24,27 @@ const generateTokens = (user) => {
 router.post('/login', limiter, async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password)
+    if (!email || !password) {
+      console.log("LOGIN FAILED: Missing email or password");
       return res.status(400).json({ error: 'Email and password required' });
-    
+    }
+    console.log("LOGIN REQUEST - Email:", email, "Password length:", password?.length);
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user || !await bcrypt.compare(password, user.password))
+    console.log("USER FOUND:", !!user);
+    if (!user) {
+      console.log("LOGIN FAILED: User not found");
       return res.status(401).json({ error: 'Invalid credentials' });
-    if (!user.isActive)
+    }
+    const match = await bcrypt.compare(password, user.password);
+    console.log("PASSWORD MATCH:", match);
+    if (!match) {
+      console.log("LOGIN FAILED: Password mismatch");
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    if (!user.isActive) {
+      console.log("LOGIN FAILED: Account deactivated");
       return res.status(403).json({ error: 'Account deactivated' });
+    }
 
     const { accessToken, refreshToken } = generateTokens(user);
     res.cookie('refreshToken', refreshToken, {
@@ -48,6 +61,54 @@ router.post('/login', limiter, async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: 'Something went wrong' });
+  }
+});
+
+const { sendEmail } = require('../utils/mailer');
+
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email)
+      return res.status(400).json({ error: 'Email is required' });
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      return res.status(404).json({ error: 'User not found with this email' });
+    }
+
+    const pin = Math.floor(1000 + Math.random() * 9000);
+    const tempPassword = `Transit@${pin}`;
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword }
+    });
+
+    await sendEmail({
+      to: email,
+      subject: 'TransitOps - Password Reset Request',
+      html: `
+        <div style="font-family: monospace; padding: 24px; background-color: #1e293b; color: #f8fafc; border-radius: 16px; border: 1px solid #475569; max-width: 500px;">
+          <h2 style="color: #22c55e; margin-top: 0; letter-spacing: 0.05em; text-transform: uppercase; font-size: 18px;">TransitOps Smart Transport</h2>
+          <p>Hello <strong>${user.name}</strong>,</p>
+          <p>A password reset has been requested for your TransitOps account.</p>
+          <p>Your temporary password is:</p>
+          <div style="font-size: 20px; color: #3b82f6; font-weight: bold; background: #0f172a; padding: 12px; border-radius: 8px; text-align: center; font-family: monospace; border: 1px solid #334155; margin: 16px 0;">
+            ${tempPassword}
+          </div>
+          <p>Please log in using this password, and immediately update your password under Settings.</p>
+          <hr style="border: 0; border-top: 1px solid #475569; margin: 24px 0;" />
+          <p style="font-size: 11px; color: #94a3b8; line-height: 1.4;">If you did not request this, please contact your System Administrator.</p>
+        </div>
+      `
+    });
+
+    res.json({ message: 'Temporary password sent to your email.' });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Failed to process password reset request.' });
   }
 });
 

@@ -55,7 +55,8 @@ export default function Login() {
       toast.success(`Welcome back, ${res.user.name}!`);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      toast.error(err.error || 'Login failed. Check your credentials.');
+      console.error("LOGIN SUBMIT ERROR:", err);
+      toast.error(err.message || err.error || 'Login failed. Check your credentials.');
       setErrors({ submit: err.error || 'Invalid credentials' });
     } finally { setLoading(false); }
   };
@@ -227,7 +228,19 @@ export default function Login() {
               </label>
               <button
                 type="button"
-                onClick={() => toast('Contact your Fleet Manager to reset password.')}
+                onClick={async () => {
+                  if (!form.email.trim()) {
+                    toast.error('Please enter your email address first.');
+                    return;
+                  }
+                  const loadingToast = toast.loading('Sending reset request...');
+                  try {
+                    await authAPI.forgotPassword({ email: form.email });
+                    toast.success('Temporary password has been sent to your email!', { id: loadingToast });
+                  } catch (err) {
+                    toast.error(err.error || 'Failed to send reset email.', { id: loadingToast });
+                  }
+                }}
                 style={{ background: 'none', border: 'none', color: '#22c55e',
                          fontSize: '13px', cursor: 'pointer' }}
               >
