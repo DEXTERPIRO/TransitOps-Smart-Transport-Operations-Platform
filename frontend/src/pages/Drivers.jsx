@@ -115,6 +115,24 @@ export default function Drivers() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
+  const [sendingReminders, setSendingReminders] = useState(false);
+
+  const handleSendReminders = async () => {
+    setSendingReminders(true);
+    const loadId = toast.loading('Checking expiries and sending emails...');
+    try {
+      const res = await driversAPI.sendExpiryReminders();
+      if (res.sent) {
+        toast.success(`License warnings emailed! (${res.expiredCount} expired, ${res.expiringSoonCount} expiring)`, { id: loadId });
+      } else {
+        toast.success('No warnings needed — all licenses valid.', { id: loadId });
+      }
+    } catch (err) {
+      toast.error(err.error || 'Failed to send reminders.', { id: loadId });
+    } finally {
+      setSendingReminders(false);
+    }
+  };
 
   const fetchDrivers = useCallback(async () => {
     setLoading(true);
@@ -206,12 +224,21 @@ export default function Drivers() {
         subtitle={`${drivers.length} driver${drivers.length !== 1 ? 's' : ''} registered`}
         icon={Users}
         action={
-          <button
-            onClick={openAdd}
-            className="btn-primary"
-          >
-            <Plus size={16} /> Add Driver
-          </button>
+          <div className="flex gap-3">
+            <button
+              onClick={handleSendReminders}
+              disabled={sendingReminders}
+              className="btn border border-[var(--border-color)] text-text-main font-mono text-xs uppercase flex items-center gap-1.5 hover:bg-[var(--accent)]/10"
+            >
+              {sendingReminders ? 'Sending...' : 'Send Reminders'}
+            </button>
+            <button
+              onClick={openAdd}
+              className="btn-primary"
+            >
+              <Plus size={16} /> Add Driver
+            </button>
+          </div>
         }
       />
 

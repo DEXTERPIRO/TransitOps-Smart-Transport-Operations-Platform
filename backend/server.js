@@ -57,6 +57,20 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => console.log('Client disconnected:', socket.id));
 });
 
+const { checkLicenseExpiriesAndSendEmails } = require('./src/utils/reminders');
+
+// Trigger daily license checks (every 24 hours)
+setInterval(() => {
+  console.log('[Scheduler] Running daily driver license expiry checks...');
+  checkLicenseExpiriesAndSendEmails();
+}, 24 * 60 * 60 * 1000);
+
+// Run initial driver license check 10 seconds after startup
+setTimeout(() => {
+  console.log('[Scheduler] Running initial driver license expiry checks on startup...');
+  checkLicenseExpiriesAndSendEmails();
+}, 10000);
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, '127.0.0.1', () => console.log(`TransitOps server running on port ${PORT}`));
 

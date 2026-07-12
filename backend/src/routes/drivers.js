@@ -177,4 +177,17 @@ router.delete('/:id', verifyToken,
   }
 });
 
+const { checkLicenseExpiriesAndSendEmails } = require('../utils/reminders');
+
+router.post('/send-expiry-reminders', verifyToken,
+  requireRoles('FLEET_MANAGER', 'SAFETY_OFFICER'), async (req, res) => {
+  try {
+    const result = await checkLicenseExpiriesAndSendEmails(req.user.email);
+    res.json(result);
+  } catch (e) {
+    console.error("REMINDER ROUTE ERROR:", e);
+    res.status(500).json({ error: 'Failed to process license reminders' });
+  }
+});
+
 module.exports = router;

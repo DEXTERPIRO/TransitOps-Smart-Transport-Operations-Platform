@@ -27,6 +27,7 @@ export const driversAPI = {
   update: (id, data) => api.put(`/drivers/${id}`, data),
   delete: (id) => api.delete(`/drivers/${id}`),
   getAvailable: () => api.get('/drivers/available/dispatch'),
+  sendExpiryReminders: () => api.post('/drivers/send-expiry-reminders'),
 };
 
 export const tripsAPI = {
