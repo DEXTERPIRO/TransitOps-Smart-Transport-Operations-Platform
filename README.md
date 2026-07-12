@@ -13,59 +13,50 @@ TransitOps is an enterprise-grade, full-stack fleet management and smart transpo
 
 ## Screenshots
 
-<details>
-  <summary><strong>Login Screen (Click to expand)</strong></summary>
-  <br/>
-  <img src="assets/screenshots/login.png" alt="Login Screen" width="100%"/>
-</details>
-
-<details>
-  <summary><strong>Operations Dashboard (Click to expand)</strong></summary>
-  <br/>
-  <img src="assets/screenshots/dashboard.png" alt="Operations Dashboard" width="100%"/>
-</details>
-
-<details>
-  <summary><strong>Fleet Management (Click to expand)</strong></summary>
-  <br/>
-  <img src="assets/screenshots/fleet.png" alt="Fleet Management" width="100%"/>
-</details>
-
-<details>
-  <summary><strong>Driver Registry & Compliance (Click to expand)</strong></summary>
-  <br/>
-  <img src="assets/screenshots/drivers.png" alt="Driver Registry" width="100%"/>
-</details>
-
-<details>
-  <summary><strong>Trip Dispatch Board (Click to expand)</strong></summary>
-  <br/>
-  <img src="assets/screenshots/trips.png" alt="Trip Dispatch Board" width="100%"/>
-</details>
-
-<details>
-  <summary><strong>Maintenance Service Logs (Click to expand)</strong></summary>
-  <br/>
-  <img src="assets/screenshots/maintenance.png" alt="Maintenance Logs" width="100%"/>
-</details>
-
-<details>
-  <summary><strong>Fuel Log Tracker (Click to expand)</strong></summary>
-  <br/>
-  <img src="assets/screenshots/fuel.png" alt="Fuel Logs" width="100%"/>
-</details>
-
-<details>
-  <summary><strong>Reports & Analytics (Click to expand)</strong></summary>
-  <br/>
-  <img src="assets/screenshots/reports.png" alt="Reports & Analytics" width="100%"/>
-</details>
-
-<details>
-  <summary><strong>System Settings (Click to expand)</strong></summary>
-  <br/>
-  <img src="assets/screenshots/settings.png" alt="System Settings" width="100%"/>
-</details>
+<table width="100%">
+  <tr>
+    <td width="33.3%" align="center" valign="top">
+      <strong>Login Screen</strong><br/><br/>
+      <img src="assets/screenshots/login.png" width="100%" />
+    </td>
+    <td width="33.3%" align="center" valign="top">
+      <strong>Operations Dashboard</strong><br/><br/>
+      <img src="assets/screenshots/dashboard.png" width="100%" />
+    </td>
+    <td width="33.3%" align="center" valign="top">
+      <strong>Fleet Management</strong><br/><br/>
+      <img src="assets/screenshots/fleet.png" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td width="33.3%" align="center" valign="top">
+      <strong>Driver Registry</strong><br/><br/>
+      <img src="assets/screenshots/drivers.png" width="100%" />
+    </td>
+    <td width="33.3%" align="center" valign="top">
+      <strong>Trip Dispatch Board</strong><br/><br/>
+      <img src="assets/screenshots/trips.png" width="100%" />
+    </td>
+    <td width="33.3%" align="center" valign="top">
+      <strong>Maintenance Logs</strong><br/><br/>
+      <img src="assets/screenshots/maintenance.png" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td width="33.3%" align="center" valign="top">
+      <strong>Fuel Logs</strong><br/><br/>
+      <img src="assets/screenshots/fuel.png" width="100%" />
+    </td>
+    <td width="33.3%" align="center" valign="top">
+      <strong>Reports & Analytics</strong><br/><br/>
+      <img src="assets/screenshots/reports.png" width="100%" />
+    </td>
+    <td width="33.3%" align="center" valign="top">
+      <strong>System Settings</strong><br/><br/>
+      <img src="assets/screenshots/settings.png" width="100%" />
+    </td>
+  </tr>
+</table>
 
 ---
 
