@@ -63,7 +63,7 @@ async function main() {
     safetyScore: 94, region: 'North', status: 'AVAILABLE'
   }});
   const d2 = await prisma.driver.create({ data: {
-    name: 'Sam Patel', email: 'strangegaming66@gmail.com', licenseNumber: 'DL-8800',
+    name: 'Sam Patel', email: 'sam@transitops.com', licenseNumber: 'DL-8800',
     licenseCategory: 'HMV', contactNumber: '+91 9765432109',
     licenseExpiry: new Date('2025-03-10'),
     safetyScore: 78, region: 'South', status: 'AVAILABLE'
