@@ -1,12 +1,29 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
+import { usePermissionsStore } from '../store/permissionsStore';
+import { useSocket } from '../hooks/useSocket';
 import { setToken } from '../api/client';
 import Logo from './ui/Logo';
 
 export default function AppInitializer({ children }) {
   const [ready, setReady] = useState(false);
   const { user, setAuth, logout } = useAuthStore();
+  const { fetchPermissions, setPermissions } = usePermissionsStore();
 
+  // Initialize the global socket singleton (useState inside useSocket triggers re-render when ready)
+  const socket = useSocket();
+
+  // ── Real-time permission updates via WebSocket ─────────────────────────
+  useEffect(() => {
+    if (!socket) return;
+    const handler = (updatedPermissions) => {
+      setPermissions(updatedPermissions);
+    };
+    socket.on('permissions:updated', handler);
+    return () => socket.off('permissions:updated', handler);
+  }, [socket, setPermissions]);
+
+  // ── Auth refresh + permissions load (sequential, not racing) ──────────
   useEffect(() => {
     const init = async () => {
       if (user) {
@@ -17,19 +34,34 @@ export default function AppInitializer({ children }) {
           );
           if (res.ok) {
             const data = await res.json();
-            setToken(data.accessToken);
+            setToken(data.accessToken);   // token ready in axios
             setAuth(user, data.accessToken);
           } else {
             logout();
+            setReady(true);
+            return;
           }
         } catch {
-          // Network error - keep user logged in
+          // Network error - keep user logged in, try fetching with existing token
         }
+
+        // ← Fetch permissions AFTER token is set (no race condition)
+        await fetchPermissions();
       }
       setReady(true);
     };
     init();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ── Re-fetch when tab regains focus (catches missed socket events) ─────
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user) fetchPermissions();
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user, fetchPermissions]);
 
   if (!ready) {
     return (

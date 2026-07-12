@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { authAPI } from '../api';
 import { setToken } from '../api/client';
+import { usePermissionsStore } from '../store/permissionsStore';
+import { useTranslation } from '../hooks/useTranslation';
 import toast from 'react-hot-toast';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import Logo from '../components/ui/Logo';
@@ -35,6 +37,7 @@ export default function Login() {
   const [forgotLoading, setForgotLoading] = useState(false);
   const isDark = theme === 'dark';
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (user) navigate('/dashboard', { replace: true });
@@ -60,6 +63,8 @@ export default function Login() {
       const res = await authAPI.login(form);
       setToken(res.accessToken);
       setAuth(res.user, res.accessToken);
+      // Load permissions from DB so Sidebar renders correctly
+      await usePermissionsStore.getState().fetchPermissions();
       toast.success(`Welcome back, ${res.user.name}!`);
       navigate('/dashboard', { replace: true });
     } catch (err) {
@@ -99,22 +104,20 @@ export default function Login() {
         <div>
           <h1 className={`text-4xl font-bold leading-tight mb-4 font-mono
             ${isDark ? 'text-white' : 'text-[var(--text-primary)]'}`}>
-            Smart Transport<br />
-            <span className="text-[var(--accent)]">Operations Platform</span>
+            {t('smartTransport')}<br />
+            <span className="text-[var(--accent)]">{t('operationsPlatform')}</span>
           </h1>
           <p className={`text-lg leading-relaxed font-mono
             ${isDark ? 'text-slate-300' : 'text-[var(--text-muted)]'}`}>
-            Digitize your fleet operations — from vehicle dispatch
-            and driver compliance to maintenance scheduling
-            and financial analytics.
+            {t('brandDescription')}
           </p>
 
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4 mt-8">
             {[
-              { label: 'Vehicles Tracked', value: '500+' },
-              { label: 'Trips Managed', value: '10K+' },
-              { label: 'Cost Saved', value: '30%' },
+              { label: t('vehiclesTracked'), value: '500+' },
+              { label: t('tripsManaged'), value: '10K+' },
+              { label: t('costSaved'), value: '30%' },
             ].map(stat => (
               <div key={stat.label}
                 className={`rounded-xl p-4 text-center
@@ -149,10 +152,10 @@ export default function Login() {
           </div>
 
           <h2 className="text-2xl font-bold text-text-main mb-2 font-mono">
-            Sign in to your account
+            {t('signInTitle')}
           </h2>
           <p className="text-text-sub mb-8 font-mono text-sm uppercase tracking-wider">
-            Enter your credentials to continue
+            {t('signInSubtitle')}
           </p>
 
           {/* Error banner */}
@@ -167,7 +170,7 @@ export default function Login() {
             {/* Email */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">
-                Email Address
+                {t('emailAddress')}
               </label>
               <input
                 type="email"
@@ -192,7 +195,7 @@ export default function Login() {
             {/* Password */}
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">
-                Password
+                {t('password')}
               </label>
               <div className="relative">
                 <input
@@ -247,7 +250,7 @@ export default function Login() {
                 style={{ background: 'none', border: 'none', color: '#22c55e',
                          fontSize: '13px', cursor: 'pointer' }}
               >
-                Forgot password?
+                {t('forgotPassword')}
               </button>
             </div>
 
@@ -259,16 +262,16 @@ export default function Login() {
               {loading ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Signing in...
+                  {t('signingIn')}
                 </>
-              ) : 'Sign In'}
+              ) : t('signIn')}
             </button>
           </form>
 
           {/* Demo credentials */}
           <div className="mt-8 p-4 bg-[var(--background)] border border-[var(--border-color)] rounded-xl shadow-[var(--shadow-recessed)]">
             <p className="text-[9px] font-bold text-text-sub font-mono uppercase tracking-wider mb-3">
-              Demo Accounts — Click to fill
+              {t('demoAccounts')}
             </p>
             <div className="grid grid-cols-2 gap-3">
               {DEMO_USERS.map(u => (

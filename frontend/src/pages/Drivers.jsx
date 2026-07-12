@@ -1,11 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { driversAPI } from '../api';
 import { useAuthStore } from '../store/authStore';
+import { usePermission } from '../hooks/usePermission';
+import { useTranslation } from '../hooks/useTranslation';
 import { PageHeader, SectionHeader, EmptyState, StatusBadge, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
 import {
   Users, Search, Plus, Pencil, AlertTriangle,
-  CheckCircle, AlertCircle, Info, PackageOpen
+  CheckCircle, AlertCircle, Info, PackageOpen, Eye,
+  Bell
 } from 'lucide-react';
 
 const CATEGORIES = ['LMV', 'HMV', 'HPMV', 'MOTORCYCLE', 'TRANSPORT'];
@@ -107,7 +110,9 @@ function Field({ label, error, children }) {
 
 export default function Drivers() {
   const { user, theme } = useAuthStore();
+  const { t } = useTranslation();
   const isDark = theme === 'dark';
+  const { canCreate, canEdit, canDelete, isReadOnly } = usePermission('drivers');
 
   const [drivers, setDrivers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -224,27 +229,50 @@ export default function Drivers() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Driver Management"
-        subtitle={`${drivers.length} driver${drivers.length !== 1 ? 's' : ''} registered`}
+        title={t('driverManagement')}
+        subtitle={`${drivers.length} ${t('driversRegistered')}`}
         icon={Users}
         action={
-          <div className="flex gap-3">
+          <div className="flex items-center gap-3">
             <button
               onClick={handleSendReminders}
               disabled={sendingReminders}
-              className="btn border border-[var(--border-color)] text-text-main font-mono text-xs uppercase flex items-center gap-1.5 hover:bg-[var(--accent)]/10"
+              className="btn-secondary py-1.5 px-3 text-xs uppercase font-mono tracking-wider flex items-center gap-1.5"
             >
-              {sendingReminders ? 'Sending...' : 'Send Reminders'}
+              <Bell size={13} className="shrink-0" />
+              {sendingReminders ? t('sending') : t('sendReminders')}
             </button>
-            <button
-              onClick={openAdd}
-              className="btn-primary"
-            >
-              <Plus size={16} /> Add Driver
-            </button>
+            {canCreate && (
+              <button
+                onClick={openAdd}
+                className="btn-primary"
+              >
+                <Plus size={16} /> {t('addDriver')}
+              </button>
+            )}
           </div>
         }
       />
+
+      {isReadOnly && (
+        <div style={{
+          background: 'rgba(59,130,246,0.1)',
+          border: '1px solid rgba(59,130,246,0.3)',
+          borderRadius: '12px',
+          padding: '10px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '13px',
+          color: '#60a5fa'
+        }}>
+          <Eye size={15} className="text-blue-400 shrink-0" />
+          <span>
+            {t('youHaveReadOnly')}
+          </span>
+        </div>
+      )}
 
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-2xl bg-panel shadow-[var(--shadow-card)] border border-[var(--border-color)]">
@@ -253,13 +281,13 @@ export default function Drivers() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search name, license number..."
+            placeholder={t('searchNameLicense')}
             className="input pl-9"
           />
         </div>
         {[
-          { key: 'status', opts: ['AVAILABLE','ON_TRIP','OFF_DUTY','SUSPENDED'], label: 'All Statuses' },
-          { key: 'region', opts: REGIONS, label: 'All Regions' },
+          { key: 'status', opts: ['AVAILABLE','ON_TRIP','OFF_DUTY','SUSPENDED'], label: t('allStatuses') },
+          { key: 'region', opts: REGIONS, label: t('allRegions') },
         ].map(f => (
           <select
             key={f.key}
@@ -283,11 +311,11 @@ export default function Drivers() {
       ) : drivers.length === 0 ? (
         <EmptyState
           icon={PackageOpen}
-          title="No drivers found"
+          title={t('noDriversFound')}
           description={
             search || Object.values(filters).some(Boolean)
-              ? 'Try adjusting your filters'
-              : 'Add your first driver to get started'
+              ? t('adjustFilters')
+              : t('addFirstDriver')
           }
         />
       ) : (
@@ -297,7 +325,7 @@ export default function Drivers() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-recessed/30">
-                  {['Name', 'License No', 'Category', 'Expiry', 'Contact', 'Safety', 'Status', 'Actions']
+                  {[t('name'), t('licenseNo'), t('category'), t('expiry'), t('contact'), t('safety'), t('status'), t('action')]
                     .map(h => <th key={h} className="table-header font-mono text-xs font-bold uppercase tracking-wider text-text-sub border-b border-b-shadow/50">{h}</th>)}
                 </tr>
               </thead>
@@ -337,25 +365,31 @@ export default function Drivers() {
                       </td>
                       <td className="table-cell border-b border-b-shadow/20"><StatusBadge status={d.status} /></td>
                       <td className="table-cell border-b border-b-shadow/20">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => openEdit(d)}
-                            className="btn-ghost p-1.5"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          {d.status !== 'ON_TRIP' && (
-                            <select
-                              value={d.status}
-                              onChange={e => handleStatusChange(d, e.target.value)}
-                              className="select text-xs py-1 px-2 w-auto"
-                            >
-                              {STATUSES_EDIT.map(s =>
-                                <option key={s} value={s}>{s}</option>
-                              )}
-                            </select>
-                          )}
-                        </div>
+                        {isReadOnly ? (
+                          <span className="text-xs font-mono text-blue-500 dark:text-blue-400 font-bold uppercase tracking-wider">{t('viewOnly')}</span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            {canEdit && (
+                              <button
+                                onClick={() => openEdit(d)}
+                                className="btn-ghost p-1.5"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                            )}
+                            {canEdit && d.status !== 'ON_TRIP' && (
+                              <select
+                                value={d.status}
+                                onChange={e => handleStatusChange(d, e.target.value)}
+                                className="select text-xs py-1 px-2 w-auto"
+                              >
+                                {STATUSES_EDIT.map(s =>
+                                  <option key={s} value={s}>{s}</option>
+                                )}
+                              </select>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   );
@@ -386,24 +420,32 @@ export default function Drivers() {
                     </span>
                   </div>
                   <div className="mt-3 font-mono text-xs">
-                    <span className="text-text-sub mr-2">SAFETY SCORE</span>
+                    <span className="text-text-sub mr-2">{t('safetyScoreLabel')}</span>
                     <SafetyBar score={d.safetyScore} />
                   </div>
-                  <div className="flex gap-2 mt-3 pt-3 border-t border-b-shadow/30">
-                    <button onClick={() => openEdit(d)}
-                      className="btn-ghost flex-1 py-1.5 justify-center">
-                      <Pencil size={13} /> Edit
-                    </button>
-                    {d.status !== 'ON_TRIP' && (
-                      <select
-                        value={d.status}
-                        onChange={e => handleStatusChange(d, e.target.value)}
-                        className="select text-xs py-1 px-2 flex-1"
-                      >
-                        {STATUSES_EDIT.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    )}
-                  </div>
+                   {isReadOnly ? (
+                     <div className="flex gap-2 mt-3 pt-3 border-t border-b-shadow/30 justify-center">
+                       <span className="text-xs font-mono text-blue-500 dark:text-blue-400 font-bold uppercase tracking-wider">{t('viewOnly')}</span>
+                     </div>
+                   ) : (
+                     canEdit && (
+                       <div className="flex gap-2 mt-3 pt-3 border-t border-b-shadow/30">
+                         <button onClick={() => openEdit(d)}
+                           className="btn-ghost flex-1 py-1.5 justify-center">
+                           <Pencil size={13} /> {t('edit')}
+                         </button>
+                         {d.status !== 'ON_TRIP' && (
+                           <select
+                             value={d.status}
+                             onChange={e => handleStatusChange(d, e.target.value)}
+                             className="select text-xs py-1 px-2 flex-1"
+                           >
+                             {STATUSES_EDIT.map(s => <option key={s} value={s}>{s}</option>)}
+                           </select>
+                         )}
+                       </div>
+                     )
+                   )}
                 </div>
               );
             })}
@@ -415,8 +457,7 @@ export default function Drivers() {
       <div className="flex items-start gap-2 px-4 py-3 rounded-xl border border-warning/20 bg-warning/5 text-xs text-text-main font-mono uppercase tracking-wider">
         <Info size={14} className="shrink-0 mt-0.5 text-warning" />
         <span>
-          Suspended or expired-license drivers are automatically hidden from trip dispatch.
-          Only AVAILABLE drivers with a valid license can be assigned to trips.
+          {t('suspendedExpiredHidden')}
         </span>
       </div>
 
@@ -424,12 +465,12 @@ export default function Drivers() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editDriver ? `Edit ${editDriver.name}` : 'Add New Driver'}
+        title={editDriver ? `${t('edit')} ${editDriver.name}` : t('addDriver')}
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Full Name *" error={errors.name}>
+            <Field label={`${t('fullName')} *`} error={errors.name}>
               <input
                 value={form.name}
                 onChange={e => handleChange('name', e.target.value)}
@@ -437,7 +478,7 @@ export default function Drivers() {
                 className={inputCls(errors.name)}
               />
             </Field>
-            <Field label="Email Address" error={errors.email}>
+            <Field label={t('emailAddress')} error={errors.email}>
               <input
                 type="email"
                 value={form.email}
@@ -446,7 +487,7 @@ export default function Drivers() {
                 className={inputCls(errors.email)}
               />
             </Field>
-            <Field label="License Number *" error={errors.licenseNo}>
+            <Field label={`${t('licenseNumber')} *`} error={errors.licenseNo}>
               <input
                 value={form.licenseNo}
                 onChange={e => handleChange('licenseNo', e.target.value.toUpperCase())}
@@ -454,17 +495,17 @@ export default function Drivers() {
                 className={inputCls(errors.licenseNo)}
               />
             </Field>
-            <Field label="License Category *" error={errors.licenseCategory}>
+            <Field label={`${t('licenseCategory')} *`} error={errors.licenseCategory}>
               <select
                 value={form.licenseCategory}
                 onChange={e => handleChange('licenseCategory', e.target.value)}
                 className={selectCls(errors.licenseCategory)}
               >
-                <option value="">Select category</option>
+                <option value="">{t('selectCategory')}</option>
                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </Field>
-            <Field label="License Expiry Date *" error={errors.licenseExpiry}>
+            <Field label={`${t('licenseExpiryDate')} *`} error={errors.licenseExpiry}>
               <input
                 type="date"
                 value={form.licenseExpiry}
@@ -473,7 +514,7 @@ export default function Drivers() {
                 className={inputCls(errors.licenseExpiry)}
               />
             </Field>
-            <Field label="Contact Number *" error={errors.contactNumber}>
+            <Field label={`${t('contactNumber')} *`} error={errors.contactNumber}>
               <input
                 type="tel"
                 value={form.contactNumber}
@@ -483,7 +524,7 @@ export default function Drivers() {
                 className={inputCls(errors.contactNumber)}
               />
             </Field>
-            <Field label="Safety Score (0–100)" error={errors.safetyScore}>
+            <Field label={t('safetyScore')} error={errors.safetyScore}>
               <input
                 type="number" min="0" max="100"
                 value={form.safetyScore}
@@ -492,13 +533,13 @@ export default function Drivers() {
                 className={inputCls(errors.safetyScore)}
               />
             </Field>
-            <Field label="Region" error={errors.region}>
+            <Field label={t('region')} error={errors.region}>
               <select
                 value={form.region}
                 onChange={e => handleChange('region', e.target.value)}
                 className={selectCls(errors.region)}
               >
-                <option value="">Select region (optional)</option>
+                <option value="">{t('selectRegion')}</option>
                 {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </Field>
@@ -510,7 +551,7 @@ export default function Drivers() {
               onClick={() => setModalOpen(false)}
               className="btn-secondary flex-1"
             >
-              Cancel
+              {t('cancel2')}
             </button>
             <button
               type="submit"
@@ -520,7 +561,7 @@ export default function Drivers() {
               {saving && (
                 <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
-              {editDriver ? 'Save Changes' : 'Add Driver'}
+              {editDriver ? t('saveChanges') : t('addDriver')}
             </button>
           </div>
         </form>

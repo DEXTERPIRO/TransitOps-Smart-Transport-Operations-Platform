@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { settingsAPI, healthAPI } from '../api';
+import api from '../api/client';
 import { useAuthStore } from '../store/authStore';
+import { usePermissionsStore } from '../store/permissionsStore';
+import { useLanguageStore } from '../store/languageStore';
 import { PageHeader, SectionHeader, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
 import {
@@ -19,11 +22,36 @@ const ROLE_COLORS = {
 
 const EMPTY_USER = { name: '', email: '', password: '', role: '', region: '' };
 
+const RBAC_ROWS = [
+  { module: 'Dashboard', fleetManager: 'Full Access', dispatcher: 'Read', safetyOfficer: 'Read', financialAnalyst: 'Read' },
+  { module: 'Fleet/Vehicles', fleetManager: 'Full Access', dispatcher: 'Read', safetyOfficer: 'No Access', financialAnalyst: 'No Access' },
+  { module: 'Drivers', fleetManager: 'Full Access', dispatcher: 'Read', safetyOfficer: 'Full Access', financialAnalyst: 'No Access' },
+  { module: 'Trips', fleetManager: 'Full Access', dispatcher: 'Full Access', safetyOfficer: 'No Access', financialAnalyst: 'No Access' },
+  { module: 'Maintenance', fleetManager: 'Full Access', dispatcher: 'No Access', safetyOfficer: 'No Access', financialAnalyst: 'No Access' },
+  { module: 'Fuel/Expenses', fleetManager: 'Full Access', dispatcher: 'No Access', safetyOfficer: 'No Access', financialAnalyst: 'Full Access' },
+  { module: 'Reports', fleetManager: 'Full Access', dispatcher: 'No Access', safetyOfficer: 'No Access', financialAnalyst: 'Full Access' },
+  { module: 'Settings', fleetManager: 'Full Access', dispatcher: 'No Access', safetyOfficer: 'No Access', financialAnalyst: 'No Access' },
+];
+
 function RoleBadge({ role }) {
   return (
     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs
                       font-medium border font-mono ${ROLE_COLORS[role] || 'bg-recessed text-text-sub border-b-shadow/25'}`}>
       {role?.replaceAll('_', ' ')}
+    </span>
+  );
+}
+
+function AccessBadge({ access, isDark }) {
+  const badgeColors = access === 'Full Access'
+    ? (isDark ? 'bg-green-500/20 text-green-400' : 'bg-green-500/20 text-green-600')
+    : access === 'Read'
+    ? (isDark ? 'bg-blue-500/20 text-blue-400' : 'bg-blue-500/20 text-blue-600')
+    : (isDark ? 'bg-slate-500/20 text-slate-500' : 'bg-slate-500/20 text-slate-600');
+
+  return (
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold font-mono ${badgeColors}`}>
+      {access}
     </span>
   );
 }
@@ -57,6 +85,8 @@ function Field({ label, error, children }) {
 
 export default function Settings() {
   const { user, theme, toggleTheme } = useAuthStore();
+  const { setPermissions: setGlobalPermissions, fetchPermissions: refetchGlobalPermissions } = usePermissionsStore();
+  const { language, setLanguage, t } = useLanguageStore();
   const isDark = theme === 'dark';
   const isManager = user?.role === 'FLEET_MANAGER';
 
@@ -76,6 +106,19 @@ export default function Settings() {
       .catch(() => setIsOnline(false));
   }, []);
 
+  const [workplaceName, setWorkplaceName] = useState(
+    localStorage.getItem('workplaceName') || 'TransitOps HQ'
+  );
+  const [timezone, setTimezone] = useState(
+    localStorage.getItem('timezone') || 'Asia/Kolkata'
+  );
+
+  const handleSaveSettings = () => {
+    localStorage.setItem('workplaceName', workplaceName);
+    localStorage.setItem('timezone', timezone);
+    toast.success(t('saveSettings') + ' ✓');
+  };
+
   const pw = passwordStrength(form.password);
 
   const fetchUsers = useCallback(async () => {
@@ -88,7 +131,57 @@ export default function Settings() {
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { if (isManager) fetchUsers(); }, [fetchUsers, isManager]);
+  const [allPermissions, setAllPermissions] = useState([]);
+
+  const MODULES = [
+    'dashboard','vehicles','drivers','trips',
+    'maintenance','fuel','reports','settings'
+  ];
+  const RBAC_ROLES = [
+    'DISPATCHER','SAFETY_OFFICER','FINANCIAL_ANALYST'
+  ];
+  const ACCESS_LEVELS = ['Full Access','Read','No Access'];
+
+  // Fetch all permissions on mount
+  useEffect(() => {
+    if (isManager) {
+      api.get('/permissions').then(data => {
+        setAllPermissions(data);
+      }).catch(err => {
+        console.error('Failed to load permissions:', err);
+      });
+      fetchUsers();
+    }
+  }, [isManager, fetchUsers]);
+
+  // Get permission for a specific role+module
+  const getPermission = (role, module) => {
+    const found = allPermissions.find(
+      p => p.role === role && p.module === module
+    );
+    return found?.access || 'No Access';
+  };
+
+  // Update permission in DB
+  const handlePermissionChange = async (role, module, access) => {
+    try {
+      await api.put('/permissions', { role, module, access });
+      setAllPermissions(prev => {
+        const existing = prev.findIndex(
+          p => p.role === role && p.module === module
+        );
+        if (existing >= 0) {
+          const updated = [...prev];
+          updated[existing] = { ...updated[existing], access };
+          return updated;
+        }
+        return [...prev, { role, module, access }];
+      });
+      toast.success(`${role.replace('_', ' ')} access to ${module} updated to ${access}`);
+    } catch (e) {
+      toast.error('Failed to update permission');
+    }
+  };
 
   // ── Access denied ────────────────────────────────────────────────────────
   if (!isManager) {
@@ -154,12 +247,12 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Settings"
-        subtitle="Application configuration and user management"
+        title={t('settingsTitle')}
+        subtitle={t('appConfiguration')}
         icon={SettingsIcon}
         action={
           <div className="flex items-center gap-2 text-[10px] px-3 py-1.5 rounded-full border border-accent/20 bg-accent/5 text-accent font-bold font-mono uppercase tracking-wider">
-            <Shield size={12} /> Fleet Manager Only
+            <Shield size={12} /> {t('fleetManager')}
           </div>
         }
       />
@@ -168,12 +261,12 @@ export default function Settings() {
 
         {/* ── LEFT: General Settings ─────────────────────────────────── */}
         <div className="rounded-2xl bg-panel shadow-[var(--shadow-card)] p-5 border border-[var(--border-color)] space-y-5">
-          <SectionHeader icon={SettingsIcon} title="General" />
+          <SectionHeader icon={SettingsIcon} title={t('general')} />
 
           {/* App name */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">
-              Application Name
+              {t('applicationName')}
             </label>
             <div className="px-3 py-2.5 rounded-xl border border-b-shadow/30 bg-recessed text-sm font-mono font-bold text-accent shadow-[var(--shadow-recessed)]">
               {appName}
@@ -183,7 +276,7 @@ export default function Settings() {
           {/* Theme toggle */}
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-3">
-              Theme
+              {t('theme')}
             </label>
             <div className="grid grid-cols-2 gap-2">
               {/* Dark option */}
@@ -197,7 +290,7 @@ export default function Settings() {
                 <div className="w-full h-10 rounded-lg bg-recessed border border-b-shadow/35 flex items-center justify-center">
                   <Moon size={14} className={isDark ? 'text-accent' : 'text-text-sub'} />
                 </div>
-                Dark Mode
+                {t('darkMode')}
                 {isDark && <span className="text-[10px] text-accent">● Active</span>}
               </button>
               {/* Light option */}
@@ -211,22 +304,78 @@ export default function Settings() {
                 <div className="w-full h-10 rounded-lg bg-recessed border border-b-shadow/35 flex items-center justify-center">
                   <Sun size={14} className={!isDark ? 'text-accent' : 'text-text-sub'} />
                 </div>
-                Light Mode
+                {t('lightMode')}
                 {!isDark && <span className="text-[10px] text-accent">● Active</span>}
               </button>
             </div>
           </div>
 
+          {/* Workplace Name */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">{t('workplaceName')}</label>
+            <input
+              type="text"
+              value={workplaceName}
+              onChange={e => setWorkplaceName(e.target.value)}
+              placeholder="Enter your organization name"
+              className="input w-full"
+            />
+          </div>
+
+          {/* Language selector */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">{t('language')}</label>
+            <select
+              value={language}
+              onChange={e => {
+                setLanguage(e.target.value);
+                toast.success('Language updated!');
+              }}
+              className="select w-full"
+            >
+              <option value="en">English</option>
+              <option value="hi">हिंदी (Hindi)</option>
+              <option value="gu">ગુજરાતી (Gujarati)</option>
+              <option value="mr">मराठी (Marathi)</option>
+            </select>
+          </div>
+
+          {/* Timezone selector */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider font-mono text-text-sub mb-1.5">{t('timezone')}</label>
+            <select
+              value={timezone}
+              onChange={e => setTimezone(e.target.value)}
+              className="select w-full"
+            >
+              <option value="Asia/Kolkata">IST — India Standard Time (UTC+5:30)</option>
+              <option value="Asia/Dubai">GST — Gulf Standard Time (UTC+4)</option>
+              <option value="UTC">UTC — Coordinated Universal Time</option>
+              <option value="Asia/Singapore">SGT — Singapore Time (UTC+8)</option>
+              <option value="Europe/London">GMT — Greenwich Mean Time (UTC+0)</option>
+            </select>
+          </div>
+
+          {/* Save button */}
+          <div className="pt-2">
+            <button
+              onClick={handleSaveSettings}
+              className="btn-primary w-full bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-xl text-sm font-medium transition duration-200"
+            >
+              {t('saveSettings')}
+            </button>
+          </div>
+
           {/* Version info */}
           <div className="text-xs space-y-1 pt-2 border-t border-b-shadow/20 text-text-sub font-mono uppercase tracking-wider text-[9px] font-bold">
             <div className="flex justify-between">
-              <span>Version</span>
+              <span>{t('version')}</span>
               <span>v1.0.0</span>
             </div>
             <div className="flex justify-between">
-              <span>Backend</span>
+              <span>{t('backendStatus')}</span>
               <span className={isOnline ? 'text-success' : 'text-danger'}>
-                {isOnline ? 'Online' : 'Offline'}
+                {isOnline ? t('connected') : t('disconnected')}
               </span>
             </div>
             <div className="flex justify-between">
@@ -240,14 +389,14 @@ export default function Settings() {
         <div className="lg:col-span-2 space-y-4">
           <SectionHeader
             icon={Shield}
-            title="User Management"
+            title={t('userManagement')}
             badge={users.length}
             action={
               <button
                 onClick={() => { setForm(EMPTY_USER); setErrors({}); setModalOpen(true); }}
                 className="btn-primary py-1.5 px-3 text-xs"
               >
-                <Plus size={13} /> Add User
+                <Plus size={13} /> {t('addUser')}
               </button>
             }
           />
@@ -265,7 +414,7 @@ export default function Settings() {
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-recessed/30">
-                      {['Name','Email','Role','Status','Action']
+                      {[t('name'),t('email'),t('role'),t('status'),t('action')]
                         .map(h => <th key={h} className="table-header font-mono text-xs font-bold uppercase tracking-wider text-text-sub border-b border-b-shadow/50">{h}</th>)}
                     </tr>
                   </thead>
@@ -281,7 +430,7 @@ export default function Settings() {
                         <td className="table-cell border-b border-b-shadow/20">
                           <span className={`text-xs font-bold font-mono
                             ${u.isActive ? 'text-success' : 'text-text-sub'}`}>
-                            {u.isActive ? '● Active' : '○ Inactive'}
+                            {u.isActive ? `● ${t('active')}` : '○ Inactive'}
                           </span>
                         </td>
                         <td className="table-cell border-b border-b-shadow/20">
@@ -290,7 +439,7 @@ export default function Settings() {
                               onClick={() => handleToggleActive(u)}
                               className={`btn-ghost text-xs px-3 py-1.5 ${u.isActive ? 'text-danger' : 'text-success'}`}
                             >
-                              {u.isActive ? 'Deactivate' : 'Activate'}
+                              {u.isActive ? t('deactivate') : t('active')}
                             </button>
                           )}
                         </td>
@@ -314,14 +463,14 @@ export default function Settings() {
                     </div>
                     <div className="flex items-center justify-between mt-2">
                       <span className={`text-xs font-mono font-bold ${u.isActive ? 'text-success' : 'text-text-sub'}`}>
-                        {u.isActive ? '● Active' : '○ Inactive'}
+                        {u.isActive ? `● ${t('active')}` : '○ Inactive'}
                       </span>
                       {u.id !== user?.id && (
                         <button
                           onClick={() => handleToggleActive(u)}
                           className={`btn-ghost text-xs px-3 py-1.5 ${u.isActive ? 'text-danger' : 'text-success'}`}
                         >
-                          {u.isActive ? 'Deactivate' : 'Activate'}
+                          {u.isActive ? t('deactivate') : t('active')}
                         </button>
                       )}
                     </div>
@@ -335,9 +484,100 @@ export default function Settings() {
           <div className="flex items-start gap-2 px-4 py-3 rounded-xl border border-warning/20 bg-warning/5 text-xs text-text-main font-mono uppercase tracking-wider">
             <Shield size={14} className="shrink-0 mt-0.5 text-warning" />
             <span>
-              Only Fleet Managers can access Settings and manage users.
-              Deactivated users cannot log in.
+              {t('onlyFleetManagers')}
             </span>
+          </div>
+
+          {/* Role-Based Access (RBAC) Section */}
+          <div className="pt-6 space-y-4">
+            <SectionHeader
+              icon={Shield}
+              title={t('roleBasedAccess')}
+            />
+
+            <div className={`rounded-2xl border ${isDark ? 'border-zinc-800' : 'border-slate-300'} overflow-hidden bg-panel shadow-[var(--shadow-card)]`}>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-recessed/30">
+                      <th className={`p-4 text-left font-mono text-xs font-bold uppercase tracking-wider text-text-sub border-b border-r ${isDark ? 'border-zinc-800' : 'border-slate-300'}`}>
+                        {t('module')}
+                      </th>
+                      <th className={`p-4 text-center font-mono text-xs font-bold uppercase tracking-wider text-orange-500 dark:text-orange-400 border-b border-r ${isDark ? 'border-zinc-800' : 'border-slate-300'}`}>
+                        {t('fleetManager')}
+                      </th>
+                      {RBAC_ROLES.map(role => (
+                        <th key={role} className={`p-4 text-center font-mono text-xs font-bold uppercase tracking-wider text-text-sub border-b ${role !== 'FINANCIAL_ANALYST' ? 'border-r' : ''} ${isDark ? 'border-zinc-800' : 'border-slate-300'}`}>
+                          {role.replace('_', ' ')}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {MODULES.map((module, i) => {
+                      const isAlternate = i % 2 === 1;
+                      const isLast = i === MODULES.length - 1;
+                      const rowBg = isAlternate
+                        ? (isDark ? 'bg-zinc-800/10' : 'bg-slate-100/50')
+                        : 'bg-transparent';
+                      const cellBorderClass = `${isLast ? '' : 'border-b'} border-r ${isDark ? 'border-zinc-800' : 'border-slate-300'}`;
+
+                      return (
+                        <tr key={module} className={`${rowBg} transition-colors duration-200 hover:bg-recessed/20`}>
+                          <td className={`p-4 text-sm font-bold text-text-main capitalize ${cellBorderClass}`}>
+                            {module}
+                          </td>
+                          {/* Fleet Manager always Full Access - not editable */}
+                          <td className={`p-4 text-center ${cellBorderClass}`}>
+                            <span style={{
+                              padding: '3px 10px', borderRadius: '6px', fontSize: '11px',
+                              fontWeight: '600', background: 'rgba(34,197,94,0.15)',
+                              color: '#4ade80', border: '1px solid rgba(34,197,94,0.2)'
+                            }}>Full Access</span>
+                          </td>
+                          {/* Other roles - editable dropdowns */}
+                          {RBAC_ROLES.map((role, rIdx) => {
+                            const isRightmost = rIdx === RBAC_ROLES.length - 1;
+                            const borderCls = `${isLast ? '' : 'border-b'} ${isRightmost ? '' : 'border-r'} ${isDark ? 'border-zinc-800' : 'border-slate-300'}`;
+                            const permissionVal = getPermission(role, module);
+
+                            return (
+                              <td key={role} className={`p-4 text-center ${borderCls}`}>
+                                <select
+                                  value={permissionVal}
+                                  onChange={e =>
+                                    handlePermissionChange(role, module, e.target.value)
+                                  }
+                                  style={{
+                                    padding: '6px 12px', borderRadius: '8px',
+                                    fontSize: '11px', fontWeight: '600', border: 'none',
+                                    cursor: 'pointer', outline: 'none',
+                                    background: permissionVal === 'Full Access'
+                                      ? 'rgba(34,197,94,0.15)'
+                                      : permissionVal === 'Read'
+                                      ? 'rgba(59,130,246,0.15)'
+                                      : 'rgba(100,116,139,0.15)',
+                                    color: permissionVal === 'Full Access'
+                                      ? '#4ade80'
+                                      : permissionVal === 'Read'
+                                      ? '#60a5fa'
+                                      : '#64748b',
+                                  }}
+                                >
+                                  {ACCESS_LEVELS.map(level => (
+                                    <option key={level} value={level}>{level}</option>
+                                  ))}
+                                </select>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>

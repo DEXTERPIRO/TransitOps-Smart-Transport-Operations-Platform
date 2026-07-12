@@ -65,6 +65,8 @@ export const settingsAPI = {
   getUsers: () => api.get('/settings/users'),
   createUser: (data) => api.post('/settings/users', data),
   updateUser: (id, data) => api.put(`/settings/users/${id}/toggle`, data),
+  getPermissions: () => api.get('/settings/permissions'),
+  updatePermissions: (permissions) => api.put('/settings/permissions', { permissions }),
 };
 
 export const reportsAPI = {

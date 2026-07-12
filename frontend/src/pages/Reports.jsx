@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { reportsAPI, vehiclesAPI } from '../api';
 import { PageHeader, StatCard, EmptyState } from '../components/ui';
 import { useAuthStore } from '../store/authStore';
+import { usePermission } from '../hooks/usePermission';
+import { useTranslation } from '../hooks/useTranslation';
 import toast from 'react-hot-toast';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
@@ -11,7 +13,7 @@ import {
 import {
   BarChart3, Download, FileText, ChevronDown,
   ChevronUp, TrendingUp, Fuel, Activity, IndianRupee,
-  AlertCircle
+  AlertCircle, Eye
 } from 'lucide-react';
 
 const SORT_KEYS = ['trips','distance','fuelUsed','fuelEfficiency','revenue','opCost','roi'];
@@ -65,6 +67,8 @@ const ROITooltip = ({ active, payload, label }) => {
 export default function Reports() {
   const { theme } = useAuthStore();
   const isDark = theme === 'dark';
+  const { canCreate, canEdit, canDelete, isReadOnly } = usePermission('reports');
+  const { t } = useTranslation();
 
   const [analytics, setAnalytics] = useState(null);
   const [vehicles, setVehicles]   = useState([]);
@@ -185,67 +189,89 @@ export default function Reports() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Analytics & Reports"
-        subtitle="Fleet performance, cost analysis, and data export"
+        title={t('analyticsReports')}
+        subtitle={t('fleetPerformance')}
         icon={BarChart3}
         action={
-          <div className="flex gap-2">
-            {/* CSV dropdown */}
-            <div className="relative" ref={dropdownRef}>
-              <button
-                onClick={() => setCsvOpen(o => !o)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--background)] text-text-main text-sm font-medium transition hover:bg-[var(--muted)] shadow-[var(--shadow-recessed)]"
-              >
-                <Download size={15} />
-                Export CSV
-                <ChevronDown size={13} className={`transition-transform ${csvOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {csvOpen && (
-                <div className="absolute right-0 top-full mt-1 z-20 w-40 rounded-xl border border-[var(--border-color)] bg-[var(--foreground)] shadow-[var(--shadow-floating)] overflow-hidden font-mono">
-                  {['trips', 'vehicles', 'fuel', 'expenses'].map(type => (
-                    <button
-                      key={type}
-                      onClick={() => handleCSV(type)}
-                      disabled={!!exporting}
-                      className="w-full text-left px-4 py-2.5 text-xs capitalize transition disabled:opacity-50 hover:bg-[var(--muted)]/50 text-text-main"
-                    >
-                      {exporting === type
-                        ? <span className="flex items-center gap-2">
-                            <div className="w-3 h-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
-                            Exporting...
-                          </span>
-                        : `${type} Report`}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+          canCreate && (
+            <div className="flex gap-2">
+              {/* CSV dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setCsvOpen(o => !o)}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[var(--border-color)] bg-[var(--background)] text-text-main text-sm font-medium transition hover:bg-[var(--muted)] shadow-[var(--shadow-recessed)]"
+                >
+                  <Download size={15} />
+                  {t('exportCSV')}
+                  <ChevronDown size={13} className={`transition-transform ${csvOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {csvOpen && (
+                  <div className="absolute right-0 top-full mt-1 z-20 w-40 rounded-xl border border-[var(--border-color)] bg-[var(--foreground)] shadow-[var(--shadow-floating)] overflow-hidden font-mono">
+                    {['trips', 'vehicles', 'fuel', 'expenses'].map(type => (
+                      <button
+                        key={type}
+                        onClick={() => handleCSV(type)}
+                        disabled={!!exporting}
+                        className="w-full text-left px-4 py-2.5 text-xs capitalize transition disabled:opacity-50 hover:bg-[var(--muted)]/50 text-text-main"
+                      >
+                        {exporting === type
+                          ? <span className="flex items-center gap-2">
+                              <div className="w-3 h-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                              Exporting...
+                            </span>
+                          : `${type} Report`}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-            {/* PDF */}
-            <button
-              onClick={handlePDF}
-              disabled={!!exporting}
-              className="btn-primary bg-accent text-white px-4 py-2.5 text-sm font-medium"
-            >
-              {exporting === 'pdf'
-                ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                : <FileText size={15} />}
-              Export PDF
-            </button>
-          </div>
+              {/* PDF */}
+              <button
+                onClick={handlePDF}
+                disabled={!!exporting}
+                className="btn-primary bg-accent text-white px-4 py-2.5 text-sm font-medium"
+              >
+                {exporting === 'pdf'
+                  ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  : <FileText size={15} />}
+                {t('exportPDF')}
+              </button>
+            </div>
+          )
         }
       />
+
+      {isReadOnly && (
+        <div style={{
+          background: 'rgba(59,130,246,0.1)',
+          border: '1px solid rgba(59,130,246,0.3)',
+          borderRadius: '12px',
+          padding: '10px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '13px',
+          color: '#60a5fa'
+        }}>
+          <Eye size={15} className="text-blue-400 shrink-0" />
+          <span>
+            {t('youHaveReadOnly')}
+          </span>
+        </div>
+      )}
 
       {/* ── Filters ──────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3 p-4 rounded-2xl bg-panel shadow-[var(--shadow-card)] border border-[var(--border-color)] font-mono">
         <div className="flex items-center gap-2">
-          <label className="text-[10px] text-text-sub font-bold uppercase tracking-wider">From</label>
+          <label className="text-[10px] text-text-sub font-bold uppercase tracking-wider">{t('from')}</label>
           <input type="date" value={filters.from}
             onChange={e => setFilters(f => ({ ...f, from: e.target.value }))}
             className={inputCls} />
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-[10px] text-text-sub font-bold uppercase tracking-wider">To</label>
+          <label className="text-[10px] text-text-sub font-bold uppercase tracking-wider">{t('to')}</label>
           <input type="date" value={filters.to}
             onChange={e => setFilters(f => ({ ...f, to: e.target.value }))}
             className={inputCls} />
@@ -255,7 +281,7 @@ export default function Reports() {
           onChange={e => setFilters(f => ({ ...f, vehicleId: e.target.value }))}
           className={inputCls}
         >
-          <option value="">All Vehicles</option>
+          <option value="">{t('allVehicles')}</option>
           {vehicles.map(v => (
             <option key={v.id} value={v.id}>
               {v.registrationNo} — {v.name}
@@ -266,7 +292,7 @@ export default function Reports() {
           onClick={fetchAnalytics}
           className="btn-primary py-2 px-4 text-sm"
         >
-          Apply
+          {t('apply')}
         </button>
         {(filters.from || filters.to || filters.vehicleId) && (
           <button
@@ -281,28 +307,28 @@ export default function Reports() {
       {/* ── KPI Stat Cards ───────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
-          label="Avg Fuel Efficiency"
+          label={t('avgFuelEfficiency')}
           value={`${summary?.avgFuelEfficiency?.toFixed(1) || '—'} km/L`}
           icon={Fuel} color="orange"
-          sub="Across active fleet"
+          sub={t('acrossActiveFleet')}
         />
         <StatCard
-          label="Fleet Utilization"
+          label={t('fleetUtilization')}
           value={`${summary?.fleetUtilization?.toFixed(0) || '—'}%`}
           icon={Activity} color="blue"
-          sub="Trips completed"
+          sub={t('tripsCompleted')}
         />
         <StatCard
-          label="Operational Cost"
+          label={t('operationalCost')}
           value={`₹${(summary?.totalOpCost || 0).toLocaleString()}`}
           icon={IndianRupee} color="purple"
-          sub="Fuel + Maintenance"
+          sub={t('fuelMaintenance')}
         />
         <StatCard
-          label="Avg Vehicle ROI"
+          label={t('avgVehicleROI')}
           value={`${summary?.avgROI?.toFixed(1) || '—'}%`}
           icon={TrendingUp} color="green"
-          sub="Revenue / Op Cost"
+          sub={t('revenueOpCost')}
         />
       </div>
 
@@ -314,7 +340,7 @@ export default function Reports() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <BarChart3 size={15} className="text-accent" />
-              <h3 className="font-bold text-sm font-mono uppercase tracking-wider text-text-main">Monthly Revenue</h3>
+              <h3 className="font-bold text-sm font-mono uppercase tracking-wider text-text-main">{t('monthlyRevenue')}</h3>
             </div>
             {monthlyRevenue?.length > 0 && (
               <span className="text-xs font-mono font-bold text-accent bg-accent/10 px-2.5 py-1 rounded-lg border border-accent/20">
@@ -377,7 +403,7 @@ export default function Reports() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <TrendingUp size={15} className="text-accent" />
-              <h3 className="font-bold text-sm font-mono uppercase tracking-wider text-text-main">Top 5 Vehicles by ROI</h3>
+              <h3 className="font-bold text-sm font-mono uppercase tracking-wider text-text-main">{t('top5VehiclesByROI')}</h3>
             </div>
           </div>
           {top5ROI.length > 0 ? (
@@ -430,9 +456,9 @@ export default function Reports() {
         const otherTotal = vehicleStats.reduce((s, v) => s + (v.otherExpenses   || 0), 0);
         const grandOpCost = fuelTotal + maintTotal + otherTotal;
         const pieData = [
-          { name: 'Fuel',        value: fuelTotal,  color: '#f59e0b' },
-          { name: 'Maintenance', value: maintTotal, color: '#f87171' },
-          { name: 'Other',       value: otherTotal, color: '#a78bfa' },
+          { name: t('fuelCost'),        value: fuelTotal,  color: '#f59e0b' },
+          { name: t('maintenanceCost'), value: maintTotal, color: '#f87171' },
+          { name: t('otherExpensesCol'),       value: otherTotal, color: '#a78bfa' },
         ].filter(d => d.value > 0);
         if (!pieData.length) return null;
         const RADIAN = Math.PI / 180;
@@ -453,10 +479,10 @@ export default function Reports() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <IndianRupee size={15} className="text-accent" />
-                <h3 className="font-bold text-sm font-mono uppercase tracking-wider text-text-main">Operational Cost Breakdown</h3>
+                <h3 className="font-bold text-sm font-mono uppercase tracking-wider text-text-main">{t('operationalCost')}</h3>
               </div>
               <span className="text-xs font-mono font-bold text-text-sub">
-                Total: <span className="text-danger">₹{grandOpCost.toLocaleString()}</span>
+                {t('total')}: <span className="text-danger">₹{grandOpCost.toLocaleString()}</span>
               </span>
             </div>
             <div className="flex flex-col lg:flex-row items-center gap-8">
@@ -512,23 +538,23 @@ export default function Reports() {
       {vehicleStats.length > 0 ? (
         <div className="rounded-2xl bg-panel shadow-[var(--shadow-card)] p-1 border border-[var(--border-color)] overflow-hidden">
           <div className="px-5 py-4 flex items-center justify-between border-b border-b-shadow/30 font-mono">
-            <h3 className="font-semibold text-text-main">Vehicle Performance Stats</h3>
+            <h3 className="font-semibold text-text-main">{t('top5VehiclesByROI')}</h3>
             <span className="text-[10px] text-text-sub uppercase tracking-wider font-bold">
-              Click headers to sort
+              {t('search')}
             </span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-recessed/30">
-                  <th className={thCls(null)}>Vehicle</th>
+                  <th className={thCls(null)}>{t('vehicleColumn')}</th>
                   {[
-                    { key: 'trips',          label: 'Trips' },
-                    { key: 'distance',       label: 'Distance' },
-                    { key: 'fuelUsed',       label: 'Fuel Used' },
-                    { key: 'fuelEfficiency', label: 'Fuel Eff.' },
-                    { key: 'revenue',        label: 'Revenue' },
-                    { key: 'opCost',         label: 'Op Cost' },
+                    { key: 'trips',          label: t('tripsCompleted') },
+                    { key: 'distance',       label: t('distance') },
+                    { key: 'fuelUsed',       label: t('fuelCost') },
+                    { key: 'fuelEfficiency', label: t('avgFuelEfficiency') },
+                    { key: 'revenue',        label: t('revenue') },
+                    { key: 'opCost',         label: t('operationalCost') },
                     { key: 'roi',            label: 'ROI %' },
                   ].map(({ key, label }) => (
                     <th key={key} className={thCls(key)}
@@ -584,8 +610,8 @@ export default function Reports() {
         </div>
       ) : (
         <EmptyState
-          title="No Performance Data"
-          description="There are no completed trips in the selected range to compile vehicle performance analytics."
+          title={t('noData')}
+          description={t('noData')}
         />
       )}
     </div>

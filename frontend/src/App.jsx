@@ -1,7 +1,9 @@
 import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useEffect } from 'react';
+import { ShieldAlert } from 'lucide-react';
 import { useAuthStore } from './store/authStore';
+import { usePermissionsStore } from './store/permissionsStore';
 import AppInitializer from './components/AppInitializer';
 
 // Pages
@@ -19,6 +21,34 @@ import AppLayout from './components/layout/AppLayout';
 function Guard({ children }) {
   const { user } = useAuthStore();
   if (!user) return <Navigate to="/login" replace />;
+  return children;
+}
+
+function PermissionGuard({ module, children }) {
+  const { getAccessLevel, loaded } = usePermissionsStore();
+
+  if (!loaded) return null;
+
+  const access = getAccessLevel(module);
+  if (access === 'No Access') {
+    return (
+      <div style={{
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        height: '60vh', gap: '16px'
+      }}>
+        <ShieldAlert size={48} style={{ color: '#ef4444' }} />
+        <h2 style={{ fontWeight: '700', fontSize: '20px' }}>
+          Access Denied
+        </h2>
+        <p style={{ color: '#64748b', textAlign: 'center' }}>
+          You do not have permission to view this page.
+          Contact your Fleet Manager.
+        </p>
+      </div>
+    );
+  }
+
   return children;
 }
 
@@ -81,13 +111,13 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <Navigate to="/dashboard" replace /> },
           { path: 'dashboard', element: <DashboardPage /> },
-          { path: 'vehicles', element: <VehiclesPage /> },
-          { path: 'drivers', element: <DriversPage /> },
-          { path: 'trips', element: <TripsPage /> },
-          { path: 'maintenance', element: <MaintenancePage /> },
-          { path: 'fuel', element: <FuelExpensesPage /> },
-          { path: 'reports', element: <ReportsPage /> },
-          { path: 'settings', element: <SettingsPage /> },
+          { path: 'vehicles', element: <PermissionGuard module="vehicles"><VehiclesPage /></PermissionGuard> },
+          { path: 'drivers', element: <PermissionGuard module="drivers"><DriversPage /></PermissionGuard> },
+          { path: 'trips', element: <PermissionGuard module="trips"><TripsPage /></PermissionGuard> },
+          { path: 'maintenance', element: <PermissionGuard module="maintenance"><MaintenancePage /></PermissionGuard> },
+          { path: 'fuel', element: <PermissionGuard module="fuel"><FuelExpensesPage /></PermissionGuard> },
+          { path: 'reports', element: <PermissionGuard module="reports"><ReportsPage /></PermissionGuard> },
+          { path: 'settings', element: <PermissionGuard module="settings"><SettingsPage /></PermissionGuard> },
         ]
       },
       { path: '*', element: <Navigate to="/dashboard" replace /> }

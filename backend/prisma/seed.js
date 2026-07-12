@@ -4,6 +4,7 @@ const prisma = new PrismaClient();
 
 async function main() {
   // Clear all tables
+  await prisma.rolePermission.deleteMany();
   await prisma.vehicleDocument.deleteMany();
   await prisma.expense.deleteMany();
   await prisma.fuelLog.deleteMany();
@@ -167,6 +168,51 @@ async function main() {
     { vehicleId: v2.id, type: 'PARKING', amount: 200,
       description: 'Overnight parking Delhi' },
   ]});
+
+  // Role Permissions
+  const defaultPermissions = [
+    // Fleet Manager - Full Access to everything
+    { role: 'FLEET_MANAGER', module: 'dashboard',    access: 'Full Access' },
+    { role: 'FLEET_MANAGER', module: 'vehicles',     access: 'Full Access' },
+    { role: 'FLEET_MANAGER', module: 'drivers',      access: 'Full Access' },
+    { role: 'FLEET_MANAGER', module: 'trips',        access: 'Full Access' },
+    { role: 'FLEET_MANAGER', module: 'maintenance',  access: 'Full Access' },
+    { role: 'FLEET_MANAGER', module: 'fuel',         access: 'Full Access' },
+    { role: 'FLEET_MANAGER', module: 'reports',      access: 'Full Access' },
+    { role: 'FLEET_MANAGER', module: 'settings',     access: 'Full Access' },
+
+    // Dispatcher
+    { role: 'DISPATCHER', module: 'dashboard',    access: 'Read' },
+    { role: 'DISPATCHER', module: 'vehicles',     access: 'Read' },
+    { role: 'DISPATCHER', module: 'drivers',      access: 'Read' },
+    { role: 'DISPATCHER', module: 'trips',        access: 'Full Access' },
+    { role: 'DISPATCHER', module: 'maintenance',  access: 'No Access' },
+    { role: 'DISPATCHER', module: 'fuel',         access: 'No Access' },
+    { role: 'DISPATCHER', module: 'reports',      access: 'No Access' },
+    { role: 'DISPATCHER', module: 'settings',     access: 'No Access' },
+
+    // Safety Officer
+    { role: 'SAFETY_OFFICER', module: 'dashboard',    access: 'Read' },
+    { role: 'SAFETY_OFFICER', module: 'vehicles',     access: 'Read' },
+    { role: 'SAFETY_OFFICER', module: 'drivers',      access: 'Full Access' },
+    { role: 'SAFETY_OFFICER', module: 'trips',        access: 'No Access' },
+    { role: 'SAFETY_OFFICER', module: 'maintenance',  access: 'No Access' },
+    { role: 'SAFETY_OFFICER', module: 'fuel',         access: 'No Access' },
+    { role: 'SAFETY_OFFICER', module: 'reports',      access: 'No Access' },
+    { role: 'SAFETY_OFFICER', module: 'settings',     access: 'No Access' },
+
+    // Financial Analyst
+    { role: 'FINANCIAL_ANALYST', module: 'dashboard',    access: 'Read' },
+    { role: 'FINANCIAL_ANALYST', module: 'vehicles',     access: 'No Access' },
+    { role: 'FINANCIAL_ANALYST', module: 'drivers',      access: 'No Access' },
+    { role: 'FINANCIAL_ANALYST', module: 'trips',        access: 'No Access' },
+    { role: 'FINANCIAL_ANALYST', module: 'maintenance',  access: 'No Access' },
+    { role: 'FINANCIAL_ANALYST', module: 'fuel',         access: 'Full Access' },
+    { role: 'FINANCIAL_ANALYST', module: 'reports',      access: 'Full Access' },
+    { role: 'FINANCIAL_ANALYST', module: 'settings',     access: 'No Access' },
+  ];
+
+  await prisma.rolePermission.createMany({ data: defaultPermissions });
 
   console.log('✅ TransitOps database seeded successfully!');
   console.log('Fleet Manager:  fleet@transitops.com / Fleet@123');

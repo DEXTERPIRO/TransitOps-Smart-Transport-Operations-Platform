@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { fuelAPI, expensesAPI, vehiclesAPI, maintenanceAPI } from '../api';
 import { useAuthStore } from '../store/authStore';
+import { usePermission } from '../hooks/usePermission';
+import { useTranslation } from '../hooks/useTranslation';
 import { PageHeader, SectionHeader, EmptyState, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
-import { Fuel, Receipt, BarChart3, Plus, AlertCircle } from 'lucide-react';
+import { Fuel, Receipt, BarChart3, Plus, AlertCircle, Eye } from 'lucide-react';
 
 const EXPENSE_TYPES = ['TOLL', 'PARKING', 'REPAIR', 'OTHER'];
 
@@ -34,6 +36,8 @@ function Field({ label, error, children }) {
 export default function FuelExpenses() {
   const { theme } = useAuthStore();
   const isDark = theme === 'dark';
+  const { canCreate, canEdit, canDelete, isReadOnly } = usePermission('fuel');
+  const { t } = useTranslation();
 
   const [vehicles, setVehicles]   = useState([]);
   const [fuelLogs, setFuelLogs]   = useState([]);
@@ -172,24 +176,46 @@ export default function FuelExpenses() {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Fuel & Expenses"
-        subtitle="Track fuel consumption and operational costs"
+        title={t('fuelAndExpenses')}
+        subtitle={t('trackFuelConsumption')}
         icon={Fuel}
       />
+
+      {isReadOnly && (
+        <div style={{
+          background: 'rgba(59,130,246,0.1)',
+          border: '1px solid rgba(59,130,246,0.3)',
+          borderRadius: '12px',
+          padding: '10px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '13px',
+          color: '#60a5fa'
+        }}>
+          <Eye size={15} className="text-blue-400 shrink-0" />
+          <span>
+            {t('youHaveReadOnly')}
+          </span>
+        </div>
+      )}
 
       {/* ── SECTION 1: Fuel Logs ──────────────────────────────────────────── */}
       <div className="space-y-3">
         <SectionHeader
           icon={Fuel}
-          title="Fuel Logs"
+          title={t('fuelLogs')}
           badge={fuelLogs.length}
           action={
-            <button
-              onClick={() => { setFuelForm(EMPTY_FUEL); setFuelErrors({}); setFuelModal(true); }}
-              className="btn-primary py-1.5 px-3 text-xs"
-            >
-              <Plus size={13} /> Log Fuel
-            </button>
+            canCreate && (
+              <button
+                onClick={() => { setFuelForm(EMPTY_FUEL); setFuelErrors({}); setFuelModal(true); }}
+                className="btn-primary py-1.5 px-3 text-xs"
+              >
+                <Plus size={13} /> {t('logFuel')}
+              </button>
+            )
           }
         />
 
@@ -197,14 +223,14 @@ export default function FuelExpenses() {
           <div className="animate-pulse h-32 rounded-2xl bg-recessed shadow-[var(--shadow-recessed)]" />
         ) : fuelLogs.length === 0 ? (
           <div className="text-center py-10 rounded-2xl bg-panel shadow-[var(--shadow-card)] grid-pattern border border-[var(--border-color)] text-text-sub text-sm font-mono uppercase tracking-wider">
-            No fuel logs yet
+            {t('noFuelLogs')}
           </div>
         ) : (
           <div className={`${tableCls} overflow-x-auto`}>
             <table className="w-full text-sm min-w-[600px]">
               <thead>
                 <tr>
-                  {['Vehicle','Date','Liters','Cost/L','Total','Odometer','Station']
+                  {[t('vehicleColumn'), t('date'), t('liters'), t('costPerL'), t('total'), t('odometer'), t('station')]
                     .map(h => <th key={h} className={thCls}>{h}</th>)}
                 </tr>
               </thead>
@@ -241,15 +267,17 @@ export default function FuelExpenses() {
       <div className="space-y-3">
         <SectionHeader
           icon={Receipt}
-          title="Other Expenses"
+          title={t('otherExpenses')}
           badge={expenses.length}
           action={
-            <button
-              onClick={() => { setExpenseForm(EMPTY_EXPENSE); setExpErrors({}); setExpenseModal(true); }}
-              className="btn-primary py-1.5 px-3 text-xs"
-            >
-              <Plus size={13} /> Add Expense
-            </button>
+            canCreate && (
+              <button
+                onClick={() => { setExpenseForm(EMPTY_EXPENSE); setExpErrors({}); setExpenseModal(true); }}
+                className="btn-primary py-1.5 px-3 text-xs"
+              >
+                <Plus size={13} /> {t('addExpense')}
+              </button>
+            )
           }
         />
 
@@ -257,14 +285,14 @@ export default function FuelExpenses() {
           <div className="animate-pulse h-32 rounded-2xl bg-recessed shadow-[var(--shadow-recessed)]" />
         ) : expenses.length === 0 ? (
           <div className="text-center py-10 rounded-2xl bg-panel shadow-[var(--shadow-card)] grid-pattern border border-[var(--border-color)] text-text-sub text-sm font-mono uppercase tracking-wider">
-            No expenses recorded
+            {t('noExpenses')}
           </div>
         ) : (
           <div className={`${tableCls} overflow-x-auto`}>
             <table className="w-full text-sm min-w-[500px]">
               <thead>
                 <tr>
-                  {['Vehicle','Date','Type','Description','Amount']
+                  {[t('vehicleColumn'), t('date'), t('typeColumn'), t('descriptionColumn'), t('amount')]
                     .map(h => <th key={h} className={thCls}>{h}</th>)}
                 </tr>
               </thead>
@@ -296,18 +324,18 @@ export default function FuelExpenses() {
 
       {/* ── SECTION 3: Cost Summary ──────────────────────────────────────── */}
       <div className="space-y-3">
-        <SectionHeader icon={BarChart3} title="Operational Cost Summary" />
+        <SectionHeader icon={BarChart3} title={t('operationalCostSummary')} />
 
         {costSummary.length === 0 ? (
           <div className="text-center py-10 rounded-2xl bg-panel shadow-[var(--shadow-card)] grid-pattern border border-[var(--border-color)] text-text-sub text-sm font-mono uppercase tracking-wider">
-            No cost data available
+            {t('noData')}
           </div>
         ) : (
           <div className={`${tableCls} overflow-x-auto`}>
             <table className="w-full text-sm min-w-[600px]">
               <thead>
                 <tr>
-                  {['Vehicle','Fuel Cost','Maintenance','Other Expenses','Total']
+                  {[t('vehicleColumn'), t('fuelCost'), t('maintenanceCost'), t('otherExpensesCol'), t('total')]
                     .map(h => <th key={h} className={thCls}>{h}</th>)}
                 </tr>
               </thead>
@@ -325,7 +353,7 @@ export default function FuelExpenses() {
                         <div className="text-xs text-text-sub">{v.name}</div>
                         {isMax && (
                           <span className="text-xs text-danger font-mono font-bold uppercase tracking-wider">
-                            ▲ Highest Cost
+                            ▲ {t('highestCost')}
                           </span>
                         )}
                       </td>
@@ -370,16 +398,16 @@ export default function FuelExpenses() {
 
       {/* ── Fuel Modal ───────────────────────────────────────────────────── */}
       <Modal isOpen={fuelModal} onClose={() => setFuelModal(false)}
-             title="Log Fuel Entry" size="md">
+             title={t('logFuel')} size="md">
         <form onSubmit={handleFuelSubmit} className="space-y-4">
-          <Field label="Vehicle *" error={fuelErrors.vehicleId}>
+          <Field label={`${t('vehicleColumn')} *`} error={fuelErrors.vehicleId}>
             <select value={fuelForm.vehicleId}
               onChange={e => {
                 setFuelForm(f => ({ ...f, vehicleId: e.target.value }));
                 if (fuelErrors.vehicleId) setFuelErrors(er => ({ ...er, vehicleId: '' }));
               }}
               className={selectCls(fuelErrors.vehicleId)}>
-              <option value="">Select vehicle</option>
+              <option value="">{t('selectVehicle')}</option>
               {vehicles.map(v => (
                 <option key={v.id} value={v.id}>
                   {v.registrationNo} — {v.name}
@@ -389,7 +417,7 @@ export default function FuelExpenses() {
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Liters *" error={fuelErrors.liters}>
+            <Field label={`${t('liters')} *`} error={fuelErrors.liters}>
               <input type="number" min="0" step="0.01"
                 value={fuelForm.liters}
                 onChange={e => {
@@ -398,7 +426,7 @@ export default function FuelExpenses() {
                 }}
                 placeholder="0.00" className={inputCls(fuelErrors.liters)} />
             </Field>
-            <Field label="Cost per Liter (₹) *" error={fuelErrors.costPerL}>
+            <Field label={`${t('costPerLiter')} *`} error={fuelErrors.costPerL}>
               <input type="number" min="0" step="0.01"
                 value={fuelForm.costPerL}
                 onChange={e => {
@@ -412,7 +440,7 @@ export default function FuelExpenses() {
           {/* Live total */}
           {fuelForm.liters && fuelForm.costPerL && (
             <div className="flex items-center justify-between px-4 py-2.5 rounded-xl border border-b-shadow/30 bg-chassis shadow-[var(--shadow-recessed)] text-sm font-mono">
-              <span className="text-text-sub uppercase tracking-wider text-[10px] font-bold">Total Cost</span>
+              <span className="text-text-sub uppercase tracking-wider text-[10px] font-bold">{t('total')}</span>
               <span className="text-success font-bold">
                 ₹{fuelTotal.toFixed(2)}
               </span>
@@ -420,7 +448,7 @@ export default function FuelExpenses() {
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Odometer (km) *" error={fuelErrors.odometer}>
+            <Field label={`${t('odometer')} *`} error={fuelErrors.odometer}>
               <input type="number" min="0"
                 value={fuelForm.odometer}
                 onChange={e => {
@@ -429,7 +457,7 @@ export default function FuelExpenses() {
                 }}
                 placeholder="0" className={inputCls(fuelErrors.odometer)} />
             </Field>
-            <Field label="Date" error={fuelErrors.date}>
+            <Field label={t('date')} error={fuelErrors.date}>
               <input type="date" value={fuelForm.date}
                 onChange={e => setFuelForm(f => ({ ...f, date: e.target.value }))}
                 className={inputCls(fuelErrors.date)} />
@@ -446,12 +474,12 @@ export default function FuelExpenses() {
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setFuelModal(false)}
               className="btn-secondary flex-1">
-              Cancel
+              {t('cancel2')}
             </button>
             <button type="submit" disabled={saving}
               className="btn-primary bg-accent flex-1">
               {saving && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              Save Fuel Log
+              {t('save')}
             </button>
           </div>
         </form>
@@ -459,13 +487,13 @@ export default function FuelExpenses() {
 
       {/* ── Expense Modal ────────────────────────────────────────────────── */}
       <Modal isOpen={expenseModal} onClose={() => setExpenseModal(false)}
-             title="Add Expense" size="sm">
+             title={t('addExpense')} size="sm">
         <form onSubmit={handleExpenseSubmit} className="space-y-4">
-          <Field label="Vehicle (optional)" error={expErrors.vehicleId}>
+          <Field label={t('vehicleColumn')} error={expErrors.vehicleId}>
             <select value={expenseForm.vehicleId}
               onChange={e => setExpenseForm(f => ({ ...f, vehicleId: e.target.value }))}
               className={selectCls(expErrors.vehicleId)}>
-              <option value="">No vehicle</option>
+              <option value="">{t('noData')}</option>
               {vehicles.map(v => (
                 <option key={v.id} value={v.id}>
                   {v.registrationNo} — {v.name}
@@ -475,18 +503,18 @@ export default function FuelExpenses() {
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Type *" error={expErrors.type}>
+            <Field label={`${t('typeColumn')} *`} error={expErrors.type}>
               <select value={expenseForm.type}
                 onChange={e => {
                   setExpenseForm(f => ({ ...f, type: e.target.value }));
                   if (expErrors.type) setExpErrors(er => ({ ...er, type: '' }));
                 }}
                 className={selectCls(expErrors.type)}>
-                <option value="">Select type</option>
-                {EXPENSE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                <option value="">{t('selectType')}</option>
+                {EXPENSE_TYPES.map(tOption => <option key={tOption} value={tOption}>{tOption}</option>)}
               </select>
             </Field>
-            <Field label="Amount (₹) *" error={expErrors.amount}>
+            <Field label={`${t('amount')} *`} error={expErrors.amount}>
               <input type="number" min="0"
                 value={expenseForm.amount}
                 onChange={e => {
@@ -497,14 +525,14 @@ export default function FuelExpenses() {
             </Field>
           </div>
 
-          <Field label="Description" error={expErrors.description}>
+          <Field label={t('descriptionColumn')} error={expErrors.description}>
             <input value={expenseForm.description}
               onChange={e => setExpenseForm(f => ({ ...f, description: e.target.value }))}
               placeholder="Optional description"
               className={inputCls(expErrors.description)} />
           </Field>
 
-          <Field label="Date" error={expErrors.date}>
+          <Field label={t('date')} error={expErrors.date}>
             <input type="date" value={expenseForm.date}
               onChange={e => setExpenseForm(f => ({ ...f, date: e.target.value }))}
               className={inputCls(expErrors.date)} />
@@ -513,12 +541,12 @@ export default function FuelExpenses() {
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setExpenseModal(false)}
               className="btn-secondary flex-1">
-              Cancel
+              {t('cancel2')}
             </button>
             <button type="submit" disabled={saving}
               className="btn-primary bg-accent flex-1">
               {saving && <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-              Add Expense
+              {t('save')}
             </button>
           </div>
         </form>

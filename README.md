@@ -1,4 +1,4 @@
-<h1 align="center"><img src="assets/logo.svg" alt="TransitOps Logo" width="40" align="middle" />&nbsp;&nbsp;TransitOps</h1>
+<h1 align="center"><img src="assets/logo.svg" alt="TransitOps Logo" width="40" align="absmiddle" />&nbsp;&nbsp;TransitOps</h1>
 <p align="center"><strong>Smart Transport Operations Platform</strong></p>
 
 <p align="center">
@@ -160,6 +160,7 @@ The frontend layout departs from standard flat aesthetics in favor of a skeuomor
 * Raised Panels: Containers and UI panels feature soft drop shadows to represent raised control boards.
 * Textured Gradients: Panels use dark and light gradients combined with a global fractal SVG noise filter overlay layer (5% opacity in dark mode, 15% opacity in light mode) to replicate concrete industrial materials.
 * Typography: Mono-spaced, high-tech engineering typefaces are utilized for operational statistics and KPI data.
+* Skeuomorphic Kanban Board: Lanes use inset neomorphic shadows (`shadow-[var(--shadow-recessed)]`) simulating recessed slots, with status-colored glowing light indicators, and cards popping out with native `.card` dropshadow and color-coordinated trip code highlights.
 
 ---
 
@@ -200,6 +201,15 @@ The frontend layout departs from standard flat aesthetics in favor of a skeuomor
 ### 6. AI Database Assistant
 * Connects to a Groq-powered LLM.
 * Utilizes database schema context mapping to translate plain text queries (e.g., "Find the vehicle with the highest maintenance cost") into accurate PostgreSQL database lookups, returning natural language answers.
+
+### 7. Multi-Language (Localization) Engine
+* **Instant Static Translation**: Instantly translates all dashboard panels, navigation sidebars, forms, and table headers on language change.
+* **Dynamic Content Translation**: Connects to the free MyMemory Translation API (`api.mymemory.translated.net`) with local caching (`localStorage`) to translate database text values (like comments, vehicle regions, and status labels) on-the-fly.
+* **Supported Languages**: English (`en`), Hindi (`hi`), Marathi (`mr`), and Gujarati (`gu`).
+
+### 8. Dynamic RBAC Permission Matrix
+* **Interactive Controls**: Permission levels for all application modules (Dashboard, Fleet, Drivers, Trips, Maintenance, Expenses, Reports, Settings) can be dynamically toggled inside the Settings panel.
+* **Real-Time Guard Protection**: Front-end route protection (`PermissionGuard`) and component read-only states instantly update on modification, redirecting unauthorized users or disabling editing permissions on-the-fly.
 
 ---
 

@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { vehiclesAPI } from '../api';
 import { useAuthStore } from '../store/authStore';
+import { usePermission } from '../hooks/usePermission';
+import { useTranslation } from '../hooks/useTranslation';
 import { PageHeader, SectionHeader, EmptyState, StatusBadge, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
 import {
   Truck, Search, Plus, Pencil, Trash2,
-  AlertCircle, PackageOpen
+  AlertCircle, PackageOpen, Eye
 } from 'lucide-react';
 
 const TYPES = ['VAN', 'TRUCK', 'BUS', 'BIKE', 'CAR'];
@@ -51,6 +53,8 @@ export default function Vehicles() {
   const { user, theme } = useAuthStore();
   const isDark = theme === 'dark';
   const isManager = user?.role === 'FLEET_MANAGER';
+  const { canCreate, canEdit, canDelete, isReadOnly } = usePermission('vehicles');
+  const { t } = useTranslation();
 
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -158,20 +162,40 @@ export default function Vehicles() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Fleet Management"
-        subtitle={`${vehicles.length} vehicle${vehicles.length !== 1 ? 's' : ''} in fleet`}
+        title={t('fleetManagement')}
+        subtitle={`${vehicles.length} ${t('vehiclesInFleet')}`}
         icon={Truck}
         action={
-          isManager && (
+          canCreate && (
             <button
               onClick={openAdd}
               className="btn-primary"
             >
-              <Plus size={16} /> Add Vehicle
+              <Plus size={16} /> {t('addVehicle')}
             </button>
           )
         }
       />
+
+      {isReadOnly && (
+        <div style={{
+          background: 'rgba(59,130,246,0.1)',
+          border: '1px solid rgba(59,130,246,0.3)',
+          borderRadius: '12px',
+          padding: '10px 16px',
+          marginBottom: '16px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '13px',
+          color: '#60a5fa'
+        }}>
+          <Eye size={15} className="text-blue-400 shrink-0" />
+          <span>
+            {t('youHaveReadOnly')}
+          </span>
+        </div>
+      )}
 
       {/* Search + Filters */}
       <div className="flex flex-col sm:flex-row gap-3 p-4 rounded-2xl bg-panel shadow-[var(--shadow-card)] border border-[var(--border-color)]">
@@ -180,14 +204,14 @@ export default function Vehicles() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search registration, name..."
+            placeholder={t('searchRegName')}
             className="input pl-9"
           />
         </div>
         {[
-          { key: 'type', opts: TYPES, label: 'All Types' },
-          { key: 'status', opts: STATUSES, label: 'All Statuses' },
-          { key: 'region', opts: REGIONS, label: 'All Regions' },
+          { key: 'type', opts: TYPES, label: t('allTypes') },
+          { key: 'status', opts: STATUSES, label: t('allStatuses') },
+          { key: 'region', opts: REGIONS, label: t('allRegions') },
         ].map(f => (
           <select
             key={f.key}
@@ -211,11 +235,11 @@ export default function Vehicles() {
       ) : vehicles.length === 0 ? (
         <EmptyState
           icon={PackageOpen}
-          title="No vehicles found"
+          title={t('noVehiclesFound')}
           description={
             search || Object.values(filters).some(Boolean)
-              ? 'Try adjusting your filters'
-              : 'Add your first vehicle to get started'
+              ? t('adjustFilters')
+              : t('addFirstVehicle')
           }
         />
       ) : (
@@ -225,8 +249,16 @@ export default function Vehicles() {
             <table className="w-full border-collapse">
               <thead>
                 <tr className="bg-recessed/30">
-                  {['Reg No', 'Name', 'Type', 'Capacity', 'Odometer', 'Acq. Cost', 'Status', 'Actions']
-                    .map(h => <th key={h} className="table-header font-mono text-xs font-bold uppercase tracking-wider text-text-sub border-b border-b-shadow/50">{h}</th>)}
+                  {[
+                    { key: 'regNo', default: 'Reg No' },
+                    { key: 'name', default: 'Name' },
+                    { key: 'type', default: 'Type' },
+                    { key: 'capacity', default: 'Capacity' },
+                    { key: 'odometer', default: 'Odometer' },
+                    { key: 'acqCost', default: 'Acq. Cost' },
+                    { key: 'status', default: 'Status' },
+                    { key: 'actions', default: 'Actions' }
+                  ].map(h => <th key={h.key} className="table-header font-mono text-xs font-bold uppercase tracking-wider text-text-sub border-b border-b-shadow/50">{t(h.key) || h.default}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -247,21 +279,27 @@ export default function Vehicles() {
                     </td>
                     <td className="table-cell border-b border-b-shadow/20"><StatusBadge status={v.status} /></td>
                     <td className="table-cell border-b border-b-shadow/20">
-                      {isManager && (
+                      {isReadOnly ? (
+                        <span className="text-xs font-mono text-blue-500 dark:text-blue-400 font-bold uppercase tracking-wider">{t('viewOnly')}</span>
+                      ) : (
                         <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => openEdit(v)}
-                            className="btn-ghost p-1.5"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            onClick={() => setDeleteTarget(v)}
-                            disabled={v.status === 'ON_TRIP'}
-                            className="btn-ghost p-1.5 text-danger disabled:opacity-30 disabled:pointer-events-none"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {canEdit && (
+                            <button
+                              onClick={() => openEdit(v)}
+                              className="btn-ghost p-1.5"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button
+                              onClick={() => setDeleteTarget(v)}
+                              disabled={v.status === 'ON_TRIP'}
+                              className="btn-ghost p-1.5 text-danger disabled:opacity-30 disabled:pointer-events-none"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       )}
                     </td>
@@ -286,22 +324,26 @@ export default function Vehicles() {
                   <StatusBadge status={v.status} />
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs mt-3 text-text-sub font-mono">
-                  <span>Type: <b className="text-text-main">{v.type}</b></span>
-                  <span>Load: <b className="text-text-main">{v.maxLoadCapacity} kg</b></span>
-                  <span>Odo: <b className="text-text-main">{v.odometer?.toLocaleString()} km</b></span>
-                  <span>Cost: <b className="text-text-main">₹{v.acquisitionCost?.toLocaleString()}</b></span>
+                  <span>{t('type')}: <b className="text-text-main">{v.type}</b></span>
+                  <span>{t('capacity')}: <b className="text-text-main">{v.maxLoadCapacity} kg</b></span>
+                  <span>{t('odometer')}: <b className="text-text-main">{v.odometer?.toLocaleString()} km</b></span>
+                  <span>{t('cost')}: <b className="text-text-main">₹{v.acquisitionCost?.toLocaleString()}</b></span>
                 </div>
-                {isManager && (
+                {(canEdit || canDelete) && (
                   <div className="flex gap-2 mt-3 pt-3 border-t border-b-shadow/30">
-                    <button onClick={() => openEdit(v)}
-                      className="btn-ghost flex-1 py-1.5 justify-center">
-                      <Pencil size={13} /> Edit
-                    </button>
-                    <button onClick={() => setDeleteTarget(v)}
-                      disabled={v.status === 'ON_TRIP'}
-                      className="btn-ghost flex-1 py-1.5 justify-center text-danger disabled:opacity-30 disabled:pointer-events-none">
-                      <Trash2 size={13} /> Delete
-                    </button>
+                    {canEdit && (
+                      <button onClick={() => openEdit(v)}
+                        className="btn-ghost flex-1 py-1.5 justify-center">
+                        <Pencil size={13} /> {t('edit')}
+                      </button>
+                    )}
+                    {canDelete && (
+                      <button onClick={() => setDeleteTarget(v)}
+                        disabled={v.status === 'ON_TRIP'}
+                        className="btn-ghost flex-1 py-1.5 justify-center text-danger disabled:opacity-30 disabled:pointer-events-none">
+                        <Trash2 size={13} /> {t('delete')}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -314,12 +356,12 @@ export default function Vehicles() {
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
-        title={editVehicle ? `Edit ${editVehicle.registrationNo}` : 'Add New Vehicle'}
+        title={editVehicle ? `${t('edit')} ${editVehicle.registrationNo}` : t('addVehicle')}
         size="lg"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Registration No *" error={errors.registrationNo}>
+            <Field label={`${t('registrationNo')} *`} error={errors.registrationNo}>
               <input
                 value={form.registrationNo}
                 onChange={e => handleChange('registrationNo', e.target.value.toUpperCase())}
@@ -327,7 +369,7 @@ export default function Vehicles() {
                 className={inputCls(errors.registrationNo)}
               />
             </Field>
-            <Field label="Vehicle Name *" error={errors.name}>
+            <Field label={`${t('vehicleName')} *`} error={errors.name}>
               <input
                 value={form.name}
                 onChange={e => handleChange('name', e.target.value)}
@@ -335,17 +377,17 @@ export default function Vehicles() {
                 className={inputCls(errors.name)}
               />
             </Field>
-            <Field label="Type *" error={errors.type}>
+            <Field label={`${t('type')} *`} error={errors.type}>
               <select
                 value={form.type}
                 onChange={e => handleChange('type', e.target.value)}
                 className={selectCls(errors.type)}
               >
-                <option value="">Select type</option>
-                {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                <option value="">{t('selectType')}</option>
+                {TYPES.map(tOption => <option key={tOption} value={tOption}>{tOption}</option>)}
               </select>
             </Field>
-            <Field label="Max Load Capacity (kg) *" error={errors.maxLoadCapacity}>
+            <Field label={`${t('maxLoadCapacity')} *`} error={errors.maxLoadCapacity}>
               <input
                 type="number" min="0"
                 value={form.maxLoadCapacity}
@@ -354,7 +396,7 @@ export default function Vehicles() {
                 className={inputCls(errors.maxLoadCapacity)}
               />
             </Field>
-            <Field label="Odometer (km) *" error={errors.odometer}>
+            <Field label={`${t('currentOdometer')} *`} error={errors.odometer}>
               <input
                 type="number" min="0"
                 value={form.odometer}
@@ -363,7 +405,7 @@ export default function Vehicles() {
                 className={inputCls(errors.odometer)}
               />
             </Field>
-            <Field label="Acquisition Cost (₹) *" error={errors.acquisitionCost}>
+            <Field label={`${t('acquisitionCost')} *`} error={errors.acquisitionCost}>
               <input
                 type="number" min="0"
                 value={form.acquisitionCost}
@@ -372,13 +414,13 @@ export default function Vehicles() {
                 className={inputCls(errors.acquisitionCost)}
               />
             </Field>
-            <Field label="Region" error={errors.region}>
+            <Field label={t('region')} error={errors.region}>
               <select
                 value={form.region}
                 onChange={e => handleChange('region', e.target.value)}
                 className={selectCls(errors.region)}
               >
-                <option value="">Select region (optional)</option>
+                <option value="">{t('selectRegion')}</option>
                 {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
             </Field>
@@ -390,7 +432,7 @@ export default function Vehicles() {
               onClick={() => setModalOpen(false)}
               className="btn-secondary flex-1"
             >
-              Cancel
+              {t('cancel2')}
             </button>
             <button
               type="submit"
@@ -400,7 +442,7 @@ export default function Vehicles() {
               {saving && (
                 <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
-              {editVehicle ? 'Save Changes' : 'Add Vehicle'}
+              {editVehicle ? t('saveChanges') : t('addVehicle')}
             </button>
           </div>
         </form>
@@ -410,7 +452,7 @@ export default function Vehicles() {
       <Modal
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        title="Delete Vehicle"
+        title={t('delete')}
         size="sm"
       >
         <p className="text-sm mb-5 text-text-main">
@@ -425,13 +467,13 @@ export default function Vehicles() {
             onClick={() => setDeleteTarget(null)}
             className="btn-secondary flex-1"
           >
-            Cancel
+            {t('cancel2')}
           </button>
           <button
             onClick={handleDelete}
             className="btn-danger flex-1"
           >
-            Delete
+            {t('delete')}
           </button>
         </div>
       </Modal>

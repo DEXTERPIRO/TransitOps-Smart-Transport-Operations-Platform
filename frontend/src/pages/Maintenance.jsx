@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { maintenanceAPI, vehiclesAPI } from '../api';
 import { useAuthStore } from '../store/authStore';
+import { usePermission } from '../hooks/usePermission';
+import { useTranslation } from '../hooks/useTranslation';
 import { PageHeader, SectionHeader, EmptyState, StatusBadge, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
 import {
   Wrench, Plus, CheckCircle, AlertCircle,
-  Info, PackageOpen, X
+  Info, PackageOpen, X, Lock
 } from 'lucide-react';
 
 const TYPES = ['OIL_CHANGE','TYRE_REPLACE','ENGINE_REPAIR',
@@ -52,6 +54,72 @@ export default function Maintenance() {
   const { theme } = useAuthStore();
   const isDark = theme === 'dark';
   const location = useLocation();
+  const { canCreate, canEdit, canDelete, isReadOnly } = usePermission('maintenance');
+  const { t } = useTranslation();
+
+  const MaintenanceReadOnlyWidgets = () => {
+    const activeJobs = logs.filter(l => l.status === 'ACTIVE');
+    const totalActiveCost = activeJobs.reduce((sum, l) => sum + (l.cost || 0), 0);
+    const completedCount = logs.filter(l => l.status !== 'ACTIVE').length;
+
+    return (
+      <div className="space-y-4">
+        {/* Read Only Access Alert */}
+        <div style={{
+          background: 'rgba(59,130,246,0.1)',
+          border: '1px solid rgba(59,130,246,0.3)',
+          borderRadius: '12px',
+          padding: '12px',
+          fontSize: '13px',
+          color: '#60a5fa',
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center'
+        }}>
+          <Lock size={15} className="text-blue-400 shrink-0" />
+          <span>
+            <strong>Read-Only Access:</strong> Contact your Fleet Manager to request permissions to submit maintenance logs.
+          </span>
+        </div>
+
+        {/* Widgets Grid */}
+        <div className="grid grid-cols-1 gap-3">
+          {/* Widget 1: Active Shop Jobs */}
+          <div className="p-4 rounded-xl border border-[var(--border-color)] bg-[var(--foreground)] shadow-[var(--shadow-recessed)]">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-text-sub font-mono uppercase font-bold tracking-wider">Active Shop Jobs</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-warning/10 text-warning border border-warning/20 font-bold">IN SHOP</span>
+            </div>
+            <div className="text-2xl font-bold mt-2 text-text-main font-mono">
+              {activeJobs.length} <span className="text-xs font-normal text-text-sub">vehicles</span>
+            </div>
+          </div>
+
+          {/* Widget 2: Total Cost */}
+          <div className="p-4 rounded-xl border border-[var(--border-color)] bg-[var(--foreground)] shadow-[var(--shadow-recessed)]">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-text-sub font-mono uppercase font-bold tracking-wider">Active Est. Cost</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-danger/10 text-danger border border-danger/20 font-bold font-mono">EXPENSE</span>
+            </div>
+            <div className="text-2xl font-bold mt-2 text-text-main font-mono">
+              ₹{totalActiveCost.toLocaleString()}
+            </div>
+          </div>
+
+          {/* Widget 3: Completed Jobs */}
+          <div className="p-4 rounded-xl border border-[var(--border-color)] bg-[var(--foreground)] shadow-[var(--shadow-recessed)]">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-text-sub font-mono uppercase font-bold tracking-wider">Completed Service</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/20 font-bold">CLOSED</span>
+            </div>
+            <div className="text-2xl font-bold mt-2 text-text-main font-mono">
+              {completedCount} <span className="text-xs font-normal text-text-sub font-mono">records</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const [logs, setLogs]         = useState([]);
   const [vehicles, setVehicles] = useState([]);
@@ -144,8 +212,8 @@ export default function Maintenance() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Maintenance Management"
-        subtitle="Track vehicle service records and shop status"
+        title={t('maintenanceManagement')}
+        subtitle={t('trackVehicleService')}
         icon={Wrench}
       />
 
@@ -153,9 +221,10 @@ export default function Maintenance() {
 
         {/* ── LEFT: New Service Record Form ───────────────────────────── */}
         <div className="rounded-2xl bg-panel shadow-[var(--shadow-card)] p-5 border border-[var(--border-color)]">
-          <SectionHeader icon={Wrench} title="New Service Record" />
+          <SectionHeader icon={Wrench} title={t('newServiceRecord')} />
 
-          <form onSubmit={handleSubmit} className="space-y-3">
+          {canCreate ? (
+            <form onSubmit={handleSubmit} className="space-y-3">
             <Field label="Vehicle *" error={errors.vehicleId}>
               <select
                 value={form.vehicleId}
@@ -165,7 +234,7 @@ export default function Maintenance() {
                 }}
                 className={selectCls(errors.vehicleId)}
               >
-                <option value="">Select vehicle</option>
+                <option value="">{t('selectVehicle')}</option>
                 {vehicles.map(v => (
                   <option key={v.id} value={v.id}>
                     {v.registrationNo} — {v.name} [{v.status}]
@@ -186,7 +255,7 @@ export default function Maintenance() {
               )}
             </Field>
 
-            <Field label="Maintenance Type *" error={errors.type}>
+            <Field label={`${t('maintenanceType')} *`} error={errors.type}>
               <select
                 value={form.type}
                 onChange={e => {
@@ -195,24 +264,24 @@ export default function Maintenance() {
                 }}
                 className={selectCls(errors.type)}
               >
-                <option value="">Select type</option>
-                {TYPES.map(t => (
-                  <option key={t} value={t}>{t.replace('_', ' ')}</option>
+                <option value="">{t('selectType')}</option>
+                {TYPES.map(tOption => (
+                  <option key={tOption} value={tOption}>{tOption.replace('_', ' ')}</option>
                 ))}
               </select>
             </Field>
 
-            <Field label="Description" error={errors.description}>
+            <Field label={t('description')} error={errors.description}>
               <textarea
                 rows={3}
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Describe the work to be done..."
+                placeholder={t('describeWork')}
                 className={`${inputCls(errors.description)} resize-none`}
               />
             </Field>
 
-            <Field label="Estimated Cost (₹)" error={errors.cost}>
+            <Field label={t('estimatedCost')} error={errors.cost}>
               <input
                 type="number" min="0"
                 value={form.cost}
@@ -225,11 +294,11 @@ export default function Maintenance() {
               />
             </Field>
 
-            <Field label="Service Center" error={errors.serviceCenter}>
+            <Field label={t('serviceCenter')} error={errors.serviceCenter}>
               <input
                 value={form.serviceCenter}
                 onChange={e => setForm(f => ({ ...f, serviceCenter: e.target.value }))}
-                placeholder="e.g. Tata Authorized Service"
+                placeholder={t('serviceCenterPlaceholder')}
                 className={inputCls(errors.serviceCenter)}
               />
             </Field>
@@ -239,14 +308,17 @@ export default function Maintenance() {
               disabled={selectedVehicle?.status === 'ON_TRIP'}
               className="btn-primary w-full mt-2"
             >
-              <Wrench size={15} /> Create Service Record
+              <Wrench size={15} /> {t('createServiceRecord')}
             </button>
           </form>
+          ) : (
+            <MaintenanceReadOnlyWidgets />
+          )}
         </div>
 
         {/* ── RIGHT: Live Service Log ─────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-4">
-          <SectionHeader icon={Wrench} title="Live Service Log" badge={logs.length} />
+          <SectionHeader icon={Wrench} title={t('liveServiceLog')} badge={logs.length} />
 
           {loading ? (
             <div className="space-y-2">
@@ -257,8 +329,8 @@ export default function Maintenance() {
           ) : logs.length === 0 ? (
             <EmptyState
               icon={PackageOpen}
-              title="No maintenance records"
-              description="No vehicle service history has been created yet"
+              title={t('noData')}
+              description={t('noData')}
             />
           ) : (
             <div className="rounded-2xl bg-panel shadow-[var(--shadow-card)] p-1 border border-[var(--border-color)] overflow-hidden">
@@ -268,7 +340,7 @@ export default function Maintenance() {
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="bg-recessed/30">
-                      {['Vehicle','Type','Description','Cost','Center','Status','Started','Action']
+                      {[t('vehicleColumn'), t('typeColumn'), t('descriptionColumn'), t('cost'), t('center'), t('status'), t('started'), t('action')]
                         .map(h => <th key={h} className="table-header font-mono text-xs font-bold uppercase tracking-wider text-text-sub border-b border-b-shadow/50">{h}</th>)}
                     </tr>
                   </thead>
@@ -303,12 +375,12 @@ export default function Maintenance() {
                           {new Date(log.createdAt).toLocaleDateString('en-IN')}
                         </td>
                         <td className="table-cell border-b border-b-shadow/20">
-                          {log.status === 'ACTIVE' && (
+                          {canEdit && log.status === 'ACTIVE' && (
                             <button
                               onClick={() => setCloseTarget(log)}
                               className="btn-ghost text-success px-2 py-1"
                             >
-                              <CheckCircle size={12} /> Close
+                              <CheckCircle size={12} /> {t('close')}
                             </button>
                           )}
                         </td>
@@ -344,12 +416,12 @@ export default function Maintenance() {
                         {log.description}
                       </p>
                     )}
-                    {log.status === 'ACTIVE' && (
+                    {canEdit && log.status === 'ACTIVE' && (
                       <button
                         onClick={() => setCloseTarget(log)}
                         className="btn-ghost text-success py-1.5 w-full justify-center"
                       >
-                        <CheckCircle size={12} /> Close Maintenance
+                        <CheckCircle size={12} /> {t('close')}
                       </button>
                     )}
                   </div>
@@ -362,8 +434,7 @@ export default function Maintenance() {
           <div className="flex items-start gap-2 px-4 py-3 rounded-xl border border-warning/20 bg-warning/5 text-xs text-text-main font-mono uppercase tracking-wider">
             <Info size={14} className="shrink-0 mt-0.5 text-warning" />
             <span>
-              Closing a maintenance record automatically restores the vehicle to{' '}
-              <strong>Available</strong> status for dispatch. Retired vehicles stay Retired.
+              {t('closingMaintenance')}
             </span>
           </div>
         </div>
@@ -371,28 +442,28 @@ export default function Maintenance() {
 
       {/* ── Confirm Create Modal ─────────────────────────────────────────── */}
       <Modal isOpen={confirmOpen} onClose={() => setConfirmOpen(false)}
-             title="Confirm Maintenance" size="sm">
+             title={t('confirm')} size="sm">
         <div className="space-y-4">
           <div className="p-4 rounded-xl border border-b-shadow/30 bg-chassis shadow-[var(--shadow-recessed)] text-sm">
             <p className="text-text-main">
               This will change{' '}
               <b className="text-accent">{selectedVehicle?.name}</b>{' '}
               ({selectedVehicle?.registrationNo}) status to{' '}
-              <b className="text-warning">In Shop</b> and remove it from
+              <b className="text-warning">{t('inShop')}</b> and remove it from
               dispatch until maintenance is closed.
             </p>
           </div>
           <div className="flex gap-3">
             <button onClick={() => setConfirmOpen(false)}
               className="btn-secondary flex-1">
-              Cancel
+              {t('cancel2')}
             </button>
             <button onClick={handleConfirm} disabled={submitting}
               className="btn-primary flex-1 disabled:opacity-50">
               {submitting && (
                 <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               )}
-              Confirm
+              {t('confirm')}
             </button>
           </div>
         </div>
@@ -400,21 +471,21 @@ export default function Maintenance() {
 
       {/* ── Confirm Close Modal ──────────────────────────────────────────── */}
       <Modal isOpen={!!closeTarget} onClose={() => setCloseTarget(null)}
-             title="Close Maintenance Record" size="sm">
+             title={t('close')} size="sm">
         <div className="space-y-4">
           <p className="text-sm text-text-main">
             Close maintenance for{' '}
             <b className="text-accent">{closeTarget?.vehicle?.registrationNo}</b>?
-            The vehicle will be restored to <b className="text-success">Available</b>.
+            The vehicle will be restored to <b className="text-success">{t('available')}</b>.
           </p>
           <div className="flex gap-3">
             <button onClick={() => setCloseTarget(null)}
               className="btn-secondary flex-1">
-              Cancel
+              {t('cancel2')}
             </button>
             <button onClick={handleClose}
               className="btn-primary bg-success flex-1">
-              <CheckCircle size={14} /> Close Record
+              <CheckCircle size={14} /> {t('close')}
             </button>
           </div>
         </div>

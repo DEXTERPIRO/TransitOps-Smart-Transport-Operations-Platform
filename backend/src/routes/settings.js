@@ -55,4 +55,55 @@ router.put('/users/:id/toggle', verifyToken,
   } catch (e) { res.status(500).json({ error: 'Something went wrong' }); }
 });
 
+// Get all role permissions
+router.get('/permissions', verifyToken, async (req, res) => {
+  try {
+    const permissions = await prisma.rolePermission.findMany();
+    res.json(permissions);
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to fetch permissions' });
+  }
+});
+
+// Update role permissions in bulk
+router.put('/permissions', verifyToken, requireRoles('FLEET_MANAGER'), async (req, res) => {
+  try {
+    const { permissions } = req.body;
+    if (!Array.isArray(permissions)) {
+      return res.status(400).json({ error: 'permissions must be an array' });
+    }
+
+    const updates = permissions.map(p => 
+      prisma.rolePermission.upsert({
+        where: {
+          role_module: {
+            role: p.role,
+            module: p.module
+          }
+        },
+        update: {
+          accessLevel: p.accessLevel
+        },
+        create: {
+          role: p.role,
+          module: p.module,
+          accessLevel: p.accessLevel
+        }
+      })
+    );
+
+    await prisma.$transaction(updates);
+
+    // Fetch updated permissions and broadcast to all connected clients
+    const updatedPermissions = await prisma.rolePermission.findMany();
+    const io = req.app.get('io');
+    if (io) io.emit('permissions:updated', updatedPermissions);
+
+    res.json({ message: 'Permissions updated successfully' });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to update permissions' });
+  }
+});
+
 module.exports = router;
+

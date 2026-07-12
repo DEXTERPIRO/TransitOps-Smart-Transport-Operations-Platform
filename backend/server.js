@@ -39,6 +39,7 @@ app.use('/api/expenses',    require('./src/routes/expenses'));
 app.use('/api/reports',     require('./src/routes/reports'));
 app.use('/api/dashboard',   require('./src/routes/dashboard'));
 app.use('/api/settings',    require('./src/routes/settings'));
+app.use('/api/permissions', require('./src/routes/permissions'));
 app.use('/api/ai',          require('./src/routes/ai'));
 
 app.get('/api/health', (req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));

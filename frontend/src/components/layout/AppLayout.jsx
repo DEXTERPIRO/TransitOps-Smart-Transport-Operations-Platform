@@ -1,34 +1,18 @@
-import { Outlet, NavLink, useNavigate, useNavigation } from 'react-router-dom';
-import { useState } from 'react';
+import { Outlet, NavLink, useNavigate, useNavigation, useLocation } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useAuthStore } from '../../store/authStore';
+import { usePermissionsStore } from '../../store/permissionsStore';
+import { useLanguageStore } from '../../store/languageStore';
 import { authAPI } from '../../api';
+import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import {
   LayoutDashboard, Truck, Users, Route, Wrench,
   Fuel, BarChart3, Settings, LogOut, Sun, Moon,
-  Menu, X, ChevronRight, Bell, Bot
+  Menu, X, ChevronRight, Bell, Bot, Lock
 } from 'lucide-react';
 import AIChatbot from '../ui/AIChatbot';
 import Logo from '../ui/Logo';
-
-const NAV_ITEMS = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard',
-    roles: ['FLEET_MANAGER','DISPATCHER','SAFETY_OFFICER','FINANCIAL_ANALYST'] },
-  { to: '/vehicles', icon: Truck, label: 'Fleet',
-    roles: ['FLEET_MANAGER','DISPATCHER'] },
-  { to: '/drivers', icon: Users, label: 'Drivers',
-    roles: ['FLEET_MANAGER','SAFETY_OFFICER','DISPATCHER'] },
-  { to: '/trips', icon: Route, label: 'Trips',
-    roles: ['FLEET_MANAGER','DISPATCHER'] },
-  { to: '/maintenance', icon: Wrench, label: 'Maintenance',
-    roles: ['FLEET_MANAGER'] },
-  { to: '/fuel', icon: Fuel, label: 'Fuel & Expenses',
-    roles: ['FLEET_MANAGER','FINANCIAL_ANALYST'] },
-  { to: '/reports', icon: BarChart3, label: 'Reports',
-    roles: ['FLEET_MANAGER','FINANCIAL_ANALYST'] },
-  { to: '/settings', icon: Settings, label: 'Settings',
-    roles: ['FLEET_MANAGER'] },
-];
 
 const ROLE_COLORS = {
   FLEET_MANAGER: 'bg-orange-500/10 text-orange-500 dark:text-orange-400 border border-orange-500/20',
@@ -44,6 +28,26 @@ const ROLE_LABELS = {
   FINANCIAL_ANALYST: 'Financial Analyst',
 };
 
+// Translation keys for each nav item
+const NAV_ITEMS = [
+  { to: '/dashboard', icon: LayoutDashboard, labelKey: 'dashboard',
+    roles: ['FLEET_MANAGER','DISPATCHER','SAFETY_OFFICER','FINANCIAL_ANALYST'] },
+  { to: '/vehicles', icon: Truck, labelKey: 'fleet',
+    roles: ['FLEET_MANAGER','DISPATCHER'] },
+  { to: '/drivers', icon: Users, labelKey: 'drivers',
+    roles: ['FLEET_MANAGER','SAFETY_OFFICER','DISPATCHER'] },
+  { to: '/trips', icon: Route, labelKey: 'trips',
+    roles: ['FLEET_MANAGER','DISPATCHER'] },
+  { to: '/maintenance', icon: Wrench, labelKey: 'maintenance',
+    roles: ['FLEET_MANAGER'] },
+  { to: '/fuel', icon: Fuel, labelKey: 'fuelExpenses',
+    roles: ['FLEET_MANAGER','FINANCIAL_ANALYST'] },
+  { to: '/reports', icon: BarChart3, labelKey: 'reports',
+    roles: ['FLEET_MANAGER','FINANCIAL_ANALYST'] },
+  { to: '/settings', icon: Settings, labelKey: 'settings',
+    roles: ['FLEET_MANAGER'] },
+];
+
 export default function AppLayout() {
   const { user, logout, theme, toggleTheme } = useAuthStore();
   const navigate = useNavigate();
@@ -51,7 +55,65 @@ export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showAI, setShowAI] = useState(false);
 
-  const allowedNav = NAV_ITEMS.filter(n => n.roles.includes(user?.role));
+  const { fetchPermissions, hasAccess, getAccessLevel, loaded, updatePermission, permissions } = usePermissionsStore();
+  const location = useLocation();
+  const { t } = useLanguageStore();
+
+  // Map module names to nav items
+  const MODULE_MAP = {
+    '/dashboard':   'dashboard',
+    '/vehicles':    'vehicles',
+    '/drivers':     'drivers',
+    '/trips':       'trips',
+    '/maintenance': 'maintenance',
+    '/fuel':        'fuel',
+    '/reports':     'reports',
+    '/settings':    'settings',
+  };
+
+  // Watch for current page permission changes and redirect to dashboard if access is revoked
+  useEffect(() => {
+    if (!user) return;
+    const currentModule = MODULE_MAP[location.pathname];
+    if (currentModule && loaded) {
+      if (!hasAccess(currentModule)) {
+        navigate('/dashboard', { replace: true });
+        toast.error(`You no longer have access to the ${currentModule} module.`, { id: 'permission-denied-toast' });
+      }
+    }
+  }, [location.pathname, permissions, loaded, navigate, user]);
+
+  // Load permissions when component mounts
+  useEffect(() => {
+    if (user?.role) {
+      fetchPermissions(user.role);
+    }
+  }, [user?.role, fetchPermissions]);
+
+  // Listen for real-time permission changes via socket
+  useEffect(() => {
+    const socket = io('http://localhost:5000');
+
+    socket.on('permissions-updated', ({ role, module, access }) => {
+      // If this update is for current user role, update their permissions
+      if (role === user?.role) {
+        updatePermission(module, access);
+        toast(`Your access to ${module} has been updated to ${access}`, {
+          icon: <Lock size={16} className="text-accent" />
+        });
+      }
+    });
+
+    return () => socket.disconnect();
+  }, [user?.role, updatePermission]);
+
+  // Filter nav based on dynamic permissions from database
+  const allowedNav = loaded
+    ? NAV_ITEMS.filter(item => {
+        const module = MODULE_MAP[item.to];
+        return hasAccess(module);
+      })
+    : NAV_ITEMS.filter(n => n.roles.includes(user?.role));
 
   const handleLogout = async () => {
     try {
@@ -95,7 +157,7 @@ export default function AppLayout() {
               </span>
             </div>
             <p className="text-[10px] uppercase font-mono font-bold tracking-wider mt-1 text-[var(--text-muted)]">
-              Smart Fleet Platform
+              {t('smartFleetPlatform')}
             </p>
           </div>
           <button
@@ -124,26 +186,48 @@ export default function AppLayout() {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-          {allowedNav.map(item => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              onClick={() => setSidebarOpen(false)}
-              className={({ isActive }) => `
-                flex items-center gap-3 px-3.5 py-2.5 rounded-xl
-                text-xs uppercase font-mono font-bold tracking-wider transition-all group
-                ${isActive
-                  ? 'bg-[var(--muted)] text-[var(--accent)] shadow-[var(--shadow-recessed)] translate-y-[1px]'
-                  : 'text-slate-700 dark:text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-[var(--text-primary)] hover:bg-slate-100 dark:hover:bg-[var(--foreground)] hover:shadow-[var(--shadow-card)] hover:-translate-y-[1px]'
-                }
-              `}
-            >
-              <item.icon size={16} />
-              <span>{item.label}</span>
-              <ChevronRight size={12} className="ml-auto opacity-0
-                group-hover:opacity-100 transition-opacity" />
-            </NavLink>
-          ))}
+          {allowedNav.map(item => {
+            const module = MODULE_MAP[item.to];
+            const accessLevel = getAccessLevel(module);
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) => `
+                  flex items-center gap-3 px-3.5 py-2.5 rounded-xl
+                  text-xs uppercase font-mono font-bold tracking-wider transition-all group
+                  ${isActive
+                    ? 'bg-[var(--muted)] text-[var(--accent)] shadow-[var(--shadow-recessed)] translate-y-[1px]'
+                    : 'text-slate-700 dark:text-[var(--text-muted)] hover:text-slate-900 dark:hover:text-[var(--text-primary)] hover:bg-slate-100 dark:hover:bg-[var(--foreground)] hover:shadow-[var(--shadow-card)] hover:-translate-y-[1px]'
+                  }
+                `}
+              >
+                <item.icon size={16} className="flex-shrink-0" />
+                <span className="flex-1 truncate">{t(item.labelKey)}</span>
+
+                {accessLevel === 'Read' && (
+                  <span className="flex-shrink-0" style={{
+                    fontSize: '9px', fontWeight: '700',
+                    padding: '2px 6px', borderRadius: '4px',
+                    background: 'rgba(59,130,246,0.15)',
+                    color: '#60a5fa',
+                    border: '1px solid rgba(59,130,246,0.2)'
+                  }}>READ</span>
+                )}
+                {accessLevel === 'Full Access' && (
+                  <span className="flex-shrink-0" style={{
+                    fontSize: '9px', fontWeight: '700',
+                    padding: '2px 6px', borderRadius: '4px',
+                    background: 'rgba(34,197,94,0.15)',
+                    color: '#4ade80',
+                    border: '1px solid rgba(34,197,94,0.2)'
+                  }}>FULL</span>
+                )}
+              </NavLink>
+            );
+          })}
         </nav>
 
         {/* Bottom actions */}
@@ -155,13 +239,13 @@ export default function AppLayout() {
                        bg-[var(--background)] shadow-[var(--shadow-card)] active:shadow-[var(--shadow-pressed)] text-[var(--text-primary)] hover:text-purple-400"
           >
             <Bot size={16} className="text-purple-400" />
-            <span>AI Assistant</span>
+            <span>{t('aiAssistant')}</span>
           </button>
 
           {/* Physical Rocker Theme Toggle Switch */}
           <div className="flex flex-col gap-1.5 pt-1">
             <span className="text-[9px] font-mono font-bold uppercase tracking-wider text-[var(--text-muted)] opacity-60">
-              THEME CHASSIS
+              {t('themeChassis')}
             </span>
             <button
               onClick={toggleTheme}
@@ -175,7 +259,7 @@ export default function AppLayout() {
               </div>
               <span className={`absolute text-[8px] font-mono font-bold uppercase tracking-wider pointer-events-none transition-all duration-300
                 ${isDark ? 'left-3 text-[var(--text-muted)]' : 'right-3 text-[var(--text-muted)]'}`}>
-                {isDark ? 'DARK MODE' : 'LIGHT MODE'}
+                {isDark ? t('darkMode') : t('lightMode')}
               </span>
             </button>
           </div>
@@ -187,7 +271,7 @@ export default function AppLayout() {
                        bg-[var(--background)] shadow-[var(--shadow-card)] active:shadow-[var(--shadow-pressed)] text-danger hover:text-red-400"
           >
             <LogOut size={16} />
-            <span>Logout</span>
+            <span>{t('logout')}</span>
           </button>
         </div>
       </aside>
@@ -206,10 +290,10 @@ export default function AppLayout() {
 
           <div className="ml-4 lg:ml-0">
             <div style={{ fontSize: '12px', color: '#22c55e', fontWeight: '600' }}>
-              Welcome back, {user?.name}!
+              {t('welcomeBack')}, {user?.name}!
             </div>
             <div style={{ fontSize: '11px', color: '#64748b' }}>
-              Logged in as {ROLE_LABELS[user?.role]}
+              {t('loggedInAs')} {ROLE_LABELS[user?.role]}
             </div>
           </div>
 
@@ -217,7 +301,7 @@ export default function AppLayout() {
             {/* Live status dot */}
             <div className="flex items-center gap-2 text-[10px] font-mono font-bold tracking-wider text-success">
               <div className="w-2.5 h-2.5 bg-success rounded-full animate-pulse shadow-[var(--shadow-glow-success)]" />
-              LIVE
+              {t('live')}
             </div>
             <div className="h-6 w-px mx-2 bg-b-shadow/30" />
             <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-[var(--text-muted)]">

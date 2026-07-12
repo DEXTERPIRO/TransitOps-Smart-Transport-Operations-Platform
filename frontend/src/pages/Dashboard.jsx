@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import { PageHeader, SectionHeader, StatCard, StatusBadge } from '../components/ui';
 import { useAuthStore } from '../store/authStore';
+import { useTranslation } from '../hooks/useTranslation';
 import toast from 'react-hot-toast';
 
 const STATUS_COLORS = {
@@ -29,6 +30,7 @@ export default function Dashboard() {
   const { theme } = useAuthStore();
   const isDark = theme === 'dark';
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const fetchData = useCallback(async () => {
     try {
@@ -52,11 +54,11 @@ export default function Dashboard() {
 
     socket.on('vehicle-added', () => {
       fetchData();
-      toast('New vehicle added to fleet', { icon: '🚛' });
+      toast('New vehicle added to fleet', { icon: <Truck size={16} className="text-accent" /> });
     });
     socket.on('trip-dispatched', (trip) => {
       fetchData();
-      toast(`Trip ${trip.tripCode} dispatched!`, { icon: '🚀' });
+      toast(`Trip ${trip.tripCode} dispatched!`, { icon: <Route size={16} className="text-accent" /> });
     });
     socket.on('trip-completed', (trip) => {
       fetchData();
@@ -65,7 +67,7 @@ export default function Dashboard() {
     socket.on('trip-cancelled', () => fetchData());
     socket.on('maintenance-created', ({ vehicleName }) => {
       fetchData();
-      toast(`${vehicleName} sent to maintenance`, { icon: '🔧' });
+      toast(`${vehicleName} sent to maintenance`, { icon: <Wrench size={16} className="text-warning" /> });
     });
     socket.on('maintenance-closed', () => fetchData());
 
@@ -94,13 +96,13 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Operations Dashboard"
-        subtitle="Real-time fleet overview and KPIs"
+        title={t('operationsDashboard')}
+        subtitle={t('realtimeFleetOverview')}
         action={
           <div className="flex gap-2 flex-wrap">
             {[
-              { key: 'type', options: ['VAN', 'TRUCK', 'BUS', 'BIKE', 'CAR'], label: 'Type: All' },
-              { key: 'region', options: ['North', 'South', 'East', 'West'], label: 'Region: All' },
+              { key: 'type', options: ['VAN', 'TRUCK', 'BUS', 'BIKE', 'CAR'], label: t('allTypes') },
+              { key: 'region', options: ['North', 'South', 'East', 'West'], label: t('allRegions') },
             ].map(f => (
               <select
                 key={f.key}
@@ -123,39 +125,37 @@ export default function Dashboard() {
         <div className="flex items-center gap-3 bg-warning/10 border border-warning/30 text-warning rounded-xl px-4 py-3 text-sm">
           <AlertTriangle size={16} />
           <span>
-            <strong>{kpis.expiringLicenses} driver(s)</strong> have
-            licenses expiring within 30 days.
-            Check the Drivers page.
+            <strong>{kpis.expiringLicenses} driver(s)</strong> {t('suspendedExpiredHidden')}
           </span>
         </div>
       )}
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Active Vehicles" value={kpis?.activeVehicles || 0}
-          icon={Truck} color="orange" sub="Excluding retired" />
-        <StatCard label="Available Now" value={kpis?.availableVehicles || 0}
+        <StatCard label={t('activeVehicles')} value={kpis?.activeVehicles || 0}
+          icon={Truck} color="orange" sub={t('excludingRetired')} />
+        <StatCard label={t('availableNow')} value={kpis?.availableVehicles || 0}
           icon={CheckCircle} color="green" />
-        <StatCard label="Active Trips" value={kpis?.activeTrips || 0}
-          icon={Route} color="blue" sub="Currently dispatched" />
-        <StatCard label="Pending Trips" value={kpis?.pendingTrips || 0}
-          icon={Activity} color="amber" sub="Draft status" />
-        <StatCard label="In Maintenance" value={kpis?.inShopVehicles || 0}
+        <StatCard label={t('activeTrips')} value={kpis?.activeTrips || 0}
+          icon={Route} color="blue" sub={t('currentlyDispatched')} />
+        <StatCard label={t('pendingTrips')} value={kpis?.pendingTrips || 0}
+          icon={Activity} color="amber" sub={t('draftStatus')} />
+        <StatCard label={t('inMaintenance')} value={kpis?.inShopVehicles || 0}
           icon={Wrench} color="red" />
-        <StatCard label="Drivers On Duty" value={kpis?.driversOnDuty || 0}
+        <StatCard label={t('driversOnDuty')} value={kpis?.driversOnDuty || 0}
           icon={Users} color="purple" />
-        <StatCard label="Fleet Utilization"
+        <StatCard label={t('fleetUtilization')}
           value={`${kpis?.fleetUtilization || 0}%`}
           icon={TrendingUp} color="orange"
-          sub={`${kpis?.onTripVehicles || 0} of ${kpis?.totalVehicles || 0} vehicles`} />
-        <StatCard label="Retired" value={kpis?.retiredVehicles || 0}
+          sub={`${kpis?.onTripVehicles || 0} ${t('to')} ${kpis?.totalVehicles || 0} ${t('vehicles')}`} />
+        <StatCard label={t('retired')} value={kpis?.retiredVehicles || 0}
           icon={Truck} color="purple" />
       </div>
 
       {/* Predictive maintenance alerts */}
       {alerts.length > 0 && (
         <div className="space-y-3">
-          <SectionHeader icon={AlertTriangle} title="Predictive Maintenance Alerts" className="mb-2" />
+          <SectionHeader icon={AlertTriangle} title={t('predictiveMaintenanceAlerts')} className="mb-2" />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {alerts.map(alert => (
               <div key={alert.vehicleId}
@@ -167,7 +167,7 @@ export default function Dashboard() {
                       {alert.vehicleName} ({alert.registrationNo})
                     </h4>
                     <p className="text-xs mt-1 text-text-sub">
-                      Traveled <strong className="font-mono text-warning">{alert.kmSinceService.toLocaleString()} km</strong> since last service.
+                      {t('traveledSinceService').replace('km since last service', `${alert.kmSinceService.toLocaleString()} km ${t('traveledSinceService')}`)}
                     </p>
                   </div>
                 </div>
@@ -175,7 +175,7 @@ export default function Dashboard() {
                   onClick={() => navigate('/maintenance', { state: { vehicleId: alert.vehicleId } })}
                   className="btn-primary px-3 py-1.5 text-xs whitespace-nowrap self-end sm:self-auto"
                 >
-                  Schedule Maintenance
+                  {t('scheduleMaintenance')}
                 </button>
               </div>
             ))}
@@ -188,7 +188,7 @@ export default function Dashboard() {
 
         {/* Fleet Status Pie Chart */}
         <div className="rounded-2xl bg-panel shadow-[var(--shadow-card)] p-5 border border-[var(--border-color)]">
-          <SectionHeader icon={Activity} title="Fleet Status Distribution" />
+          <SectionHeader icon={Activity} title={t('fleetStatusDistribution')} />
           {pieData.length > 0 ? (
             <>
               <div className="relative flex justify-center items-center h-[200px]">
@@ -219,7 +219,7 @@ export default function Dashboard() {
                     {pieData.reduce((acc, curr) => acc + curr.value, 0)}
                   </span>
                   <span className="text-[9px] uppercase tracking-widest font-extrabold text-[var(--text-muted)]">
-                    Vehicles
+                    {t('vehicles')}
                   </span>
                 </div>
               </div>
@@ -238,14 +238,14 @@ export default function Dashboard() {
             </>
           ) : (
             <div className="h-48 flex items-center justify-center text-text-sub text-sm font-mono uppercase tracking-wider">
-              No vehicle data
+              {t('noData')}
             </div>
           )}
         </div>
 
         {/* Recent Trips */}
         <div className="rounded-2xl bg-panel shadow-[var(--shadow-card)] p-5 border border-[var(--border-color)]">
-          <SectionHeader icon={Route} title="Recent Trips" />
+          <SectionHeader icon={Route} title={t('recentTrips')} />
           {recentTrips?.length > 0 ? (
             <div className="space-y-3">
               {recentTrips.map(trip => {
@@ -279,7 +279,7 @@ export default function Dashboard() {
           ) : (
             <div className="h-48 flex flex-col items-center justify-center text-text-sub gap-2 font-mono uppercase tracking-wider">
               <Route size={32} className="opacity-30" />
-              <span className="text-sm">No trips yet</span>
+              <span className="text-sm">{t('noTrips')}</span>
             </div>
           )}
         </div>

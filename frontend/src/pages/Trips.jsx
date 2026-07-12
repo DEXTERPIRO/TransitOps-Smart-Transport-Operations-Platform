@@ -2,20 +2,50 @@ import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { tripsAPI, vehiclesAPI, driversAPI } from '../api';
 import { useAuthStore } from '../store/authStore';
+import { usePermission } from '../hooks/usePermission';
+import { useTranslation } from '../hooks/useTranslation';
 import { PageHeader, SectionHeader, StatusBadge, Modal } from '../components/ui';
 import toast from 'react-hot-toast';
 import {
   Route, Truck, Users, Package, Send, CheckCircle,
   XCircle, Eye, AlertCircle, ArrowRight, Fuel,
-  Gauge, Calendar, FileText, ChevronRight
+  Gauge, Calendar, FileText, ChevronRight, Lock
 } from 'lucide-react';
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 const COLUMNS = [
-  { status: 'DRAFT',      label: 'Draft',      color: 'text-text-sub',  border: 'border-b-shadow/30' },
-  { status: 'DISPATCHED', label: 'Dispatched',  color: 'text-blue-500 dark:text-blue-400',   border: 'border-blue-500/40' },
-  { status: 'COMPLETED',  label: 'Completed',   color: 'text-success',  border: 'border-success/40' },
-  { status: 'CANCELLED',  label: 'Cancelled',   color: 'text-danger',    border: 'border-danger/40' },
+  {
+    status: 'DRAFT',
+    labelKey: 'draft',
+    color: 'text-text-sub',
+    dotColor: 'bg-text-sub/50',
+    badgeClass: 'bg-recessed text-text-sub',
+    border: 'border-slate-300/40 dark:border-slate-700/40'
+  },
+  {
+    status: 'DISPATCHED',
+    labelKey: 'dispatched',
+    color: 'text-blue-500 dark:text-blue-400',
+    dotColor: 'bg-blue-500 dark:bg-blue-400 shadow-[0_0_6px_#3b82f6]',
+    badgeClass: 'bg-blue-500/10 text-blue-500 dark:text-blue-400',
+    border: 'border-blue-500/30'
+  },
+  {
+    status: 'COMPLETED',
+    labelKey: 'completed',
+    color: 'text-green-500 dark:text-green-400',
+    dotColor: 'bg-green-500 dark:bg-green-400 shadow-[0_0_6px_#22c55e]',
+    badgeClass: 'bg-green-500/10 text-green-500 dark:text-green-400',
+    border: 'border-green-500/30'
+  },
+  {
+    status: 'CANCELLED',
+    labelKey: 'cancelled',
+    color: 'text-red-500 dark:text-red-400',
+    dotColor: 'bg-red-500 dark:bg-red-400 shadow-[0_0_6px_#ef4444]',
+    badgeClass: 'bg-red-500/10 text-red-500 dark:text-red-400',
+    border: 'border-red-500/30'
+  },
 ];
 
 const EMPTY_FORM = {
@@ -64,13 +94,35 @@ function validateForm(form, vehicles) {
 }
 
 // ─── Trip Card ────────────────────────────────────────────────────────────────
-function TripCard({ trip, isDark, onDispatch, onComplete, onCancel, onView }) {
+function TripCard({ trip, onDispatch, onComplete, onCancel, onView }) {
+  const { isReadOnly } = usePermission('trips');
+  const { t } = useTranslation();
+  const { theme } = useAuthStore();
+  const [hovered, setHovered] = useState(false);
+  const isDark = theme === 'dark';
+
+  const statusTextColors = {
+    DRAFT: 'text-text-sub',
+    DISPATCHED: 'text-blue-500 dark:text-blue-400',
+    COMPLETED: 'text-green-500 dark:text-green-400',
+    CANCELLED: 'text-red-500 dark:text-red-400',
+  };
+
   return (
-    <div className="card text-sm">
+    <div
+      className="card text-sm transition-all duration-300 hover:translate-y-[-2px]"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        boxShadow: hovered
+          ? (isDark ? '6px 6px 18px rgba(0, 0, 0, 0.65)' : '6px 6px 18px rgba(163, 177, 198, 0.7)')
+          : (isDark ? '4px 4px 12px rgba(0, 0, 0, 0.4)' : '4px 4px 12px rgba(163, 177, 198, 0.45)')
+      }}
+    >
 
       {/* Trip code + route */}
       <div className="flex items-start justify-between mb-2">
-        <span className="font-mono text-accent font-bold text-xs">
+        <span className={`font-mono font-bold text-xs ${statusTextColors[trip.status]}`}>
           {trip.tripCode}
         </span>
         <StatusBadge status={trip.status} />
@@ -98,36 +150,45 @@ function TripCard({ trip, isDark, onDispatch, onComplete, onCancel, onView }) {
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-1.5 mt-3 pt-2 border-t border-b-shadow/30">
-        {trip.status === 'DRAFT' && (
-          <>
-            <button onClick={() => onDispatch(trip)}
-              className="btn-ghost flex-1 py-1.5 text-[10px] uppercase font-mono font-bold tracking-wider text-blue-500 dark:text-blue-400 justify-center">
-              <Send size={11} /> Dispatch
-            </button>
-            <button onClick={() => onCancel(trip)}
-              className="btn-ghost flex-1 py-1.5 text-[10px] uppercase font-mono font-bold tracking-wider text-danger justify-center">
-              <XCircle size={11} /> Cancel
-            </button>
-          </>
-        )}
-        {trip.status === 'DISPATCHED' && (
-          <>
-            <button onClick={() => onComplete(trip)}
-              className="btn-ghost flex-1 py-1.5 text-[10px] uppercase font-mono font-bold tracking-wider text-success justify-center">
-              <CheckCircle size={11} /> Complete
-            </button>
-            <button onClick={() => onCancel(trip)}
-              className="btn-ghost flex-1 py-1.5 text-[10px] uppercase font-mono font-bold tracking-wider text-danger justify-center">
-              <XCircle size={11} /> Cancel
-            </button>
-          </>
-        )}
-        {(trip.status === 'COMPLETED' || trip.status === 'CANCELLED') && (
+      <div className="flex gap-1.5 mt-3 pt-2.5 border-t border-b-shadow/20">
+        {isReadOnly ? (
           <button onClick={() => onView(trip)}
-            className="btn-secondary flex-1 py-1 text-[10px] uppercase font-mono font-bold tracking-wider justify-center">
-            <Eye size={11} /> View Details
+            className="flex-1 py-1.5 rounded-lg text-[10px] uppercase font-mono font-bold tracking-wider text-text-main bg-recessed/30 hover:bg-recessed/50 active:scale-95 border border-[var(--border-color)]/50 hover:border-[var(--border-color)] flex items-center justify-center gap-1 transition-all duration-150 shadow-[var(--shadow-recessed)] hover:shadow-none">
+            <Eye size={11} /> {t('viewDetails')}
           </button>
+        ) : (
+          <>
+            {trip.status === 'DRAFT' && (
+              <>
+                <button onClick={() => onDispatch(trip)}
+                  className="flex-1 py-1.5 rounded-lg text-[10px] uppercase font-mono font-bold tracking-wider text-blue-600 dark:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 active:scale-95 border border-blue-500/20 hover:border-blue-500/40 flex items-center justify-center gap-1 transition-all duration-150">
+                  <Send size={11} /> {t('dispatch')}
+                </button>
+                <button onClick={() => onCancel(trip)}
+                  className="flex-1 py-1.5 rounded-lg text-[10px] uppercase font-mono font-bold tracking-wider text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 active:scale-95 border border-red-500/20 hover:border-red-500/40 flex items-center justify-center gap-1 transition-all duration-150">
+                  <XCircle size={11} /> {t('cancel')}
+                </button>
+              </>
+            )}
+            {trip.status === 'DISPATCHED' && (
+              <>
+                <button onClick={() => onComplete(trip)}
+                  className="flex-1 py-1.5 rounded-lg text-[10px] uppercase font-mono font-bold tracking-wider text-green-600 dark:text-green-400 bg-green-500/10 hover:bg-green-500/20 active:scale-95 border border-green-500/20 hover:border-green-500/40 flex items-center justify-center gap-1 transition-all duration-150">
+                  <CheckCircle size={11} /> {t('complete')}
+                </button>
+                <button onClick={() => onCancel(trip)}
+                  className="flex-1 py-1.5 rounded-lg text-[10px] uppercase font-mono font-bold tracking-wider text-red-600 dark:text-red-400 bg-red-500/10 hover:bg-red-500/20 active:scale-95 border border-red-500/20 hover:border-red-500/40 flex items-center justify-center gap-1 transition-all duration-150">
+                  <XCircle size={11} /> {t('cancel')}
+                </button>
+              </>
+            )}
+            {(trip.status === 'COMPLETED' || trip.status === 'CANCELLED') && (
+              <button onClick={() => onView(trip)}
+                className="flex-1 py-1.5 rounded-lg text-[10px] uppercase font-mono font-bold tracking-wider text-text-main bg-recessed/30 hover:bg-recessed/50 active:scale-95 border border-[var(--border-color)]/50 hover:border-[var(--border-color)] flex items-center justify-center gap-1 transition-all duration-150 shadow-[var(--shadow-recessed)] hover:shadow-none">
+                <Eye size={11} /> {t('viewDetails')}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -165,6 +226,70 @@ const estimateRouteDistance = async (lat1, lon1, lat2, lon2) => {
 export default function Trips() {
   const { theme } = useAuthStore();
   const isDark = theme === 'dark';
+  const { canCreate, canEdit, canDelete, isReadOnly } = usePermission('trips');
+  const { t } = useTranslation();
+
+  const TripsReadOnlyWidgets = () => {
+    const dispatched = trips.filter(t => t.status === 'DISPATCHED').length;
+    
+    return (
+      <div className="space-y-4">
+        {/* Read Only Access Alert */}
+        <div style={{
+          background: 'rgba(59,130,246,0.1)',
+          border: '1px solid rgba(59,130,246,0.3)',
+          borderRadius: '12px',
+          padding: '12px',
+          fontSize: '13px',
+          color: '#60a5fa',
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center'
+        }}>
+          <Lock size={15} className="text-blue-400 shrink-0" />
+          <span>
+            <strong>Read-Only Access:</strong> Contact your Fleet Manager to request full dispatch permissions.
+          </span>
+        </div>
+
+        {/* Widgets Grid */}
+        <div className="grid grid-cols-1 gap-3">
+          {/* Widget 1: Available Fleet */}
+          <div className="p-4 rounded-xl border border-[var(--border-color)] bg-[var(--foreground)] shadow-[var(--shadow-recessed)]">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-text-sub font-mono uppercase font-bold tracking-wider">Available Fleet</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success border border-success/20 font-bold">READY</span>
+            </div>
+            <div className="text-2xl font-bold mt-2 text-text-main font-mono">
+              {availableVehicles.length} <span className="text-xs font-normal text-text-sub">vehicles</span>
+            </div>
+          </div>
+
+          {/* Widget 2: On-Duty Drivers */}
+          <div className="p-4 rounded-xl border border-[var(--border-color)] bg-[var(--foreground)] shadow-[var(--shadow-recessed)]">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-text-sub font-mono uppercase font-bold tracking-wider">On-Duty Drivers</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-500 border border-blue-500/20 font-bold">ACTIVE</span>
+            </div>
+            <div className="text-2xl font-bold mt-2 text-text-main font-mono">
+              {availableDrivers.length} <span className="text-xs font-normal text-text-sub">drivers</span>
+            </div>
+          </div>
+
+          {/* Widget 3: Dispatched Trips */}
+          <div className="p-4 rounded-xl border border-[var(--border-color)] bg-[var(--foreground)] shadow-[var(--shadow-recessed)]">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-text-sub font-mono uppercase font-bold tracking-wider">Dispatched Trips</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-500 border border-orange-500/20 font-bold">ON ROAD</span>
+            </div>
+            <div className="text-2xl font-bold mt-2 text-text-main font-mono">
+              {dispatched} <span className="text-xs font-normal text-text-sub font-mono">ongoing</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Data state
   const [trips, setTrips] = useState([]);
@@ -410,8 +535,8 @@ export default function Trips() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Trip Dispatcher"
-        subtitle="Create and manage fleet trips in real-time"
+        title={t('tripDispatcher')}
+        subtitle={t('createManageTrips')}
         icon={Route}
       />
 
@@ -420,13 +545,14 @@ export default function Trips() {
 
         {/* ── LEFT: Create Trip Form ─────────────────────────────────────── */}
         <div className="rounded-2xl bg-panel shadow-[var(--shadow-card)] p-5 border border-[var(--border-color)]">
-          <SectionHeader icon={Route} title="Create Trip" />
+          <SectionHeader icon={Route} title={t('createTrip')} />
 
-          <form onSubmit={handleCreateTrip} className="space-y-3">
+          {canCreate ? (
+            <form onSubmit={handleCreateTrip} className="space-y-3">
             {/* Source / Destination */}
             {/* Source / Destination */}
             <div className="relative">
-              <Field label="Source *" error={formErrors.source}>
+              <Field label={`${t('source')} *`} error={formErrors.source}>
                 <input
                   value={form.source}
                   onChange={e => {
@@ -462,7 +588,7 @@ export default function Trips() {
             </div>
 
             <div className="relative">
-              <Field label="Destination *" error={formErrors.destination}>
+              <Field label={`${t('destination')} *`} error={formErrors.destination}>
                 <input
                   value={form.destination}
                   onChange={e => {
@@ -498,13 +624,13 @@ export default function Trips() {
             </div>
 
             {/* Vehicle selector */}
-            <Field label="Vehicle *" error={formErrors.vehicleId}>
+            <Field label={`${t('vehicle')} *`} error={formErrors.vehicleId}>
               <select
                 value={form.vehicleId}
                 onChange={e => handleFormChange('vehicleId', e.target.value)}
                 className={selectCls(formErrors.vehicleId)}
               >
-                <option value="">Select available vehicle</option>
+                <option value="">{t('selectAvailableVehicle')}</option>
                 {availableVehicles.map(v => (
                   <option key={v.id} value={v.id}>
                     {v.registrationNo} — {v.name} ({v.maxLoadCapacity} kg)
@@ -519,13 +645,13 @@ export default function Trips() {
             </Field>
 
             {/* Driver selector */}
-            <Field label="Driver *" error={formErrors.driverId}>
+            <Field label={`${t('driver')} *`} error={formErrors.driverId}>
               <select
                 value={form.driverId}
                 onChange={e => handleFormChange('driverId', e.target.value)}
                 className={selectCls(formErrors.driverId)}
               >
-                <option value="">Select available driver</option>
+                <option value="">{t('selectAvailableDriver')}</option>
                 {availableDrivers.map(d => (
                   <option key={d.id} value={d.id}>
                     {d.name} — {d.licenseNo} (Score: {d.safetyScore ?? 'N/A'})
@@ -535,7 +661,7 @@ export default function Trips() {
             </Field>
 
             {/* Cargo Weight with progress bar */}
-            <Field label="Cargo Weight (kg) *" error={formErrors.cargoWeight}>
+            <Field label={`${t('cargoWeight')} *`} error={formErrors.cargoWeight}>
               <input
                 type="number" min="0"
                 value={form.cargoWeight}
@@ -564,7 +690,7 @@ export default function Trips() {
 
             {/* Distance + Revenue */}
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Distance (km) *" error={formErrors.plannedDistance}>
+              <Field label={`${t('distance')} *`} error={formErrors.plannedDistance}>
                 <input
                   type="number" min="0"
                   value={form.plannedDistance}
@@ -573,7 +699,7 @@ export default function Trips() {
                   className={inputCls(formErrors.plannedDistance)}
                 />
               </Field>
-              <Field label="Revenue (₹)" error={formErrors.revenue}>
+              <Field label={`${t('revenue')}`} error={formErrors.revenue}>
                 <input
                   type="number" min="0"
                   value={form.revenue}
@@ -585,7 +711,7 @@ export default function Trips() {
             </div>
 
             {/* Scheduled + Notes */}
-            <Field label="Scheduled Date/Time" error={formErrors.scheduledAt}>
+            <Field label={t('scheduledDateTime')} error={formErrors.scheduledAt}>
               <input
                 type="datetime-local"
                 value={form.scheduledAt}
@@ -593,12 +719,12 @@ export default function Trips() {
                 className={inputCls(formErrors.scheduledAt)}
               />
             </Field>
-            <Field label="Notes" error={formErrors.notes}>
+            <Field label={t('notes')} error={formErrors.notes}>
               <textarea
                 rows={2}
                 value={form.notes}
                 onChange={e => handleFormChange('notes', e.target.value)}
-                placeholder="Optional trip notes..."
+                placeholder={t('optionalTripNotes')}
                 className={`${inputCls(formErrors.notes)} resize-none`}
               />
             </Field>
@@ -614,39 +740,45 @@ export default function Trips() {
               {submitting ? 'Creating...' : 'Create as Draft'}
             </button>
           </form>
+          ) : (
+            <TripsReadOnlyWidgets />
+          )}
         </div>
 
         {/* ── RIGHT: Kanban Board ────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-4">
-          <SectionHeader icon={Send} title="Trips Board" badge={trips.length} />
+          <SectionHeader icon={Send} title={t('tripsBoard')} badge={trips.length} />
 
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
             {COLUMNS.map(col => (
-              <div key={col.status}>
+              <div
+                key={col.status}
+                className="bg-panel/20 dark:bg-muted/10 p-4 rounded-2xl border border-[var(--border-color)]/30 flex flex-col min-h-[480px] shadow-[var(--shadow-recessed)]"
+              >
                 {/* Column header */}
-                <div className={`flex items-center justify-between mb-2 pb-2
-                                 border-b ${col.border}`}>
-                  <span className={`text-xs font-semibold font-mono
-                                    uppercase tracking-wider ${col.color}`}>
-                    {col.label}
-                  </span>
-                  <span className="text-xs font-mono px-1.5 py-0.5 rounded-md bg-recessed text-text-sub">
+                <div className={`flex items-center justify-between mb-4 pb-2.5 border-b ${col.border}`}>
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full ${col.dotColor}`} />
+                    <span className={`text-xs font-bold font-mono uppercase tracking-wider ${col.color}`}>
+                      {t(col.labelKey)}
+                    </span>
+                  </div>
+                  <span className={`text-xs font-bold font-mono px-2 py-0.5 rounded-full ${col.badgeClass}`}>
                     {grouped[col.status]?.length || 0}
                   </span>
                 </div>
 
                 {/* Cards */}
-                <div className="space-y-2">
+                <div className="flex-1 space-y-3 overflow-y-auto max-h-[600px] pr-2.5">
                   {grouped[col.status]?.length === 0 ? (
-                    <div className="text-center py-8 text-xs rounded-xl border-dashed border border-b-shadow/30 text-text-sub font-mono uppercase tracking-wider">
-                      No trips
+                    <div className="text-center py-12 text-xs rounded-xl border-dashed border border-b-shadow/30 text-text-sub font-mono uppercase tracking-wider bg-panel/10 dark:bg-panel/5">
+                      {t('noTrips')}
                     </div>
                   ) : (
                     grouped[col.status].map(trip => (
                       <TripCard
                         key={trip.id}
                         trip={trip}
-                        isDark={isDark}
                         onDispatch={setDispatchTarget}
                         onComplete={(t) => {
                           setCompleteTarget(t);
@@ -669,7 +801,7 @@ export default function Trips() {
       <Modal
         isOpen={!!dispatchTarget}
         onClose={() => setDispatchTarget(null)}
-        title="Confirm Dispatch"
+        title={t('confirm')}
         size="sm"
       >
         <div className="space-y-4">
@@ -685,7 +817,7 @@ export default function Trips() {
             <p className="mt-2 text-xs text-text-sub">
               Vehicle <b className="text-text-main">{dispatchTarget?.vehicle?.registrationNo}</b> and
               driver <b className="text-text-main">{dispatchTarget?.driver?.name}</b> will be
-              marked <b className="text-blue-500 dark:text-blue-400">On Trip</b>.
+              marked <b className="text-blue-500 dark:text-blue-400">{t('onTrip')}</b>.
             </p>
           </div>
           <div className="flex gap-3">
@@ -693,7 +825,7 @@ export default function Trips() {
               onClick={() => setDispatchTarget(null)}
               className="btn-secondary flex-1"
             >
-              Cancel
+              {t('cancel2')}
             </button>
             <button
               onClick={handleDispatch}
@@ -703,7 +835,7 @@ export default function Trips() {
               {actionLoading
                 ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 : <Send size={14} />}
-              Dispatch Now
+              {t('dispatch')}
             </button>
           </div>
         </div>
@@ -713,11 +845,11 @@ export default function Trips() {
       <Modal
         isOpen={!!completeTarget}
         onClose={() => setCompleteTarget(null)}
-        title={`Complete Trip ${completeTarget?.tripCode}`}
+        title={`${t('complete')} ${completeTarget?.tripCode}`}
         size="sm"
       >
         <form onSubmit={handleComplete} className="space-y-4">
-          <Field label="End Odometer Reading (km) *" error={completeErrors.endOdometer}>
+          <Field label={`${t('endOdometer')} *`} error={completeErrors.endOdometer}>
             <div className="relative">
               <Gauge size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-sub" />
               <input
@@ -732,7 +864,7 @@ export default function Trips() {
               />
             </div>
           </Field>
-          <Field label="Fuel Consumed (L)" error={completeErrors.fuelConsumed}>
+          <Field label={t('fuelConsumedL')} error={completeErrors.fuelConsumed}>
             <div className="relative">
               <Fuel size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-sub" />
               <input
@@ -744,7 +876,7 @@ export default function Trips() {
               />
             </div>
           </Field>
-          <Field label="Actual Distance (km)" error={completeErrors.actualDistance}>
+          <Field label={t('actualDistance')} error={completeErrors.actualDistance}>
             <input
               type="number" min="0"
               value={completeForm.actualDistance}
@@ -756,14 +888,14 @@ export default function Trips() {
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setCompleteTarget(null)}
               className="btn-secondary flex-1">
-              Back
+              {t('cancel2')}
             </button>
             <button type="submit" disabled={actionLoading}
               className="btn-primary bg-success flex-1">
               {actionLoading
                 ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 : <CheckCircle size={14} />}
-              Mark Complete
+              {t('complete')}
             </button>
           </div>
         </form>
@@ -773,7 +905,7 @@ export default function Trips() {
       <Modal
         isOpen={!!cancelTarget}
         onClose={() => setCancelTarget(null)}
-        title="Cancel Trip"
+        title={t('cancel')}
         size="sm"
       >
         <div className="space-y-4">
@@ -790,7 +922,7 @@ export default function Trips() {
                 <span>
                   Vehicle <b>{cancelTarget?.vehicle?.registrationNo}</b> and
                   driver <b>{cancelTarget?.driver?.name}</b> will be
-                  returned to <b>Available</b>.
+                  returned to <b>{t('available')}</b>.
                 </span>
               </div>
             )}
@@ -798,14 +930,14 @@ export default function Trips() {
           <div className="flex gap-3">
             <button onClick={() => setCancelTarget(null)}
               className="btn-secondary flex-1">
-              Keep Trip
+              {t('cancel2')}
             </button>
             <button onClick={handleCancel} disabled={actionLoading}
               className="btn-danger flex-1">
               {actionLoading
                 ? <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 : <XCircle size={14} />}
-              Cancel Trip
+              {t('cancel')}
             </button>
           </div>
         </div>
@@ -833,14 +965,14 @@ export default function Trips() {
             {/* Details grid */}
             <div className="grid grid-cols-2 gap-4 p-4 rounded-xl border border-b-shadow/30 bg-chassis shadow-[var(--shadow-recessed)] text-sm font-mono">
               {[
-                { label: 'Vehicle', value: `${viewTrip.vehicle?.registrationNo} — ${viewTrip.vehicle?.name}` },
-                { label: 'Driver', value: viewTrip.driver?.name },
-                { label: 'Cargo Weight', value: `${viewTrip.cargoWeight} kg` },
-                { label: 'Planned Distance', value: `${viewTrip.plannedDistance} km` },
-                { label: 'Actual Distance', value: viewTrip.actualDistance ? `${viewTrip.actualDistance} km` : '—' },
-                { label: 'Fuel Consumed', value: viewTrip.fuelConsumed ? `${viewTrip.fuelConsumed} L` : '—' },
-                { label: 'Revenue', value: viewTrip.revenue ? `₹${viewTrip.revenue.toLocaleString()}` : '—' },
-                { label: 'Scheduled', value: viewTrip.scheduledAt ? new Date(viewTrip.scheduledAt).toLocaleString('en-IN') : '—' },
+                { label: t('vehicle'), value: `${viewTrip.vehicle?.registrationNo} — ${viewTrip.vehicle?.name}` },
+                { label: t('driver'), value: viewTrip.driver?.name },
+                { label: t('cargoWeight'), value: `${viewTrip.cargoWeight} kg` },
+                { label: t('plannedDistance'), value: `${viewTrip.plannedDistance} km` },
+                { label: t('actualDistance'), value: viewTrip.actualDistance ? `${viewTrip.actualDistance} km` : '—' },
+                { label: t('fuelConsumedL'), value: viewTrip.fuelConsumed ? `${viewTrip.fuelConsumed} L` : '—' },
+                { label: t('revenue'), value: viewTrip.revenue ? `₹${viewTrip.revenue.toLocaleString()}` : '—' },
+                { label: t('scheduledDateTime'), value: viewTrip.scheduledAt ? new Date(viewTrip.scheduledAt).toLocaleString('en-IN') : '—' },
               ].map(({ label, value }) => (
                 <div key={label}>
                   <p className="text-[10px] font-bold text-text-sub uppercase tracking-wider mb-0.5">{label}</p>
@@ -893,9 +1025,9 @@ export default function Trips() {
             {viewTrip.notes && (
               <div className="p-3 rounded-xl border border-b-shadow/30 bg-chassis shadow-[var(--shadow-recessed)] text-sm text-text-main font-mono">
                 <p className="text-[10px] font-bold text-text-sub uppercase tracking-wider mb-1 flex items-center gap-1">
-                  <FileText size={11} /> Notes
+                  <FileText size={11} /> {t('notes')}
                 </p>
-                {viewTrip.notes}
+                {t(viewTrip.notes)}
               </div>
             )}
           </div>
