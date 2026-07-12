@@ -1,8 +1,7 @@
-<p align="center">
-  <img src="assets/logo.svg" alt="TransitOps Logo" width="120" height="120" />
-</p>
-
-<h1 align="center">TransitOps</h1>
+<h1 align="center">
+  <img src="assets/logo.svg" alt="TransitOps Logo" width="48" height="48" style="vertical-align: middle; margin-right: 12px;" />
+  TransitOps
+</h1>
 <p align="center"><strong>Smart Transport Operations Platform</strong></p>
 
 <p align="center">
@@ -178,12 +177,14 @@ The frontend layout departs from standard flat aesthetics in favor of a skeuomor
   * `RETIRED`: Vehicle is permanently deactivated.
 
 ### 2. Driver Registry & Validation
-* Driver metadata tracking license numbers, safety scores (scale of 0-100), and availability.
+* Driver metadata tracking emails, license numbers, safety scores (scale of 0-100), and availability.
 * Strict validation guards prevent suspended or expired drivers from being assigned to any active dispatches.
-* Odometer compliance: Logs active vehicle odometer mileage upon route assignment.
+* **Driver License Expiry Scheduler**: An automated 24-hour check scans driver licenses, sending a consolidated report to the Fleet Manager and direct warnings to the driver's email (if configured) when their license is expired or expiring within 30 days.
 
-### 3. Route Dispatch Board
-* Route planning coordinates resolved in real-time using Leaflet.js interactive maps.
+### 3. Route Dispatch Board & Map API Integration
+* **Nominatim Suggestions API**: Dynamic address suggestions dropdown in the Source and Destination form fields using the free OpenStreetMap Nominatim search service with a 400ms debouncing trigger.
+* **OSRM Route Calculations**: Driving route distance automatically estimated in kilometers using the Open Source Routing Machine (OSRM) driving API upon location selection.
+* **Haversine Backup**: Fallback calculation using the Haversine formula with a winding factor of `1.25` in case OSRM is offline.
 * Live status board for trip state tracking (`DRAFT` -> `DISPATCHED` -> `COMPLETED` / `CANCELLED`).
 * WebSockets (Socket.io) broadcast real-time location telemetry to all active dashboard clients, eliminating the need for polling.
 
@@ -266,8 +267,12 @@ To handle local development port redirection dynamically, the API backend config
   }
   ```
 
-### 2. Forgot Password Request
-* **URL**: `/api/auth/forgot-password`
+### 2. OTP Forgot Password Flow
+
+The password recovery system uses a secure 3-step OTP validation flow sent via SMTP:
+
+#### Step A: Send OTP
+* **URL**: `/api/auth/send-otp`
 * **Method**: `POST`
 * **Request Body**:
   ```json
@@ -278,7 +283,42 @@ To handle local development port redirection dynamically, the API backend config
 * **Success Response (200 OK)**:
   ```json
   {
-    "message": "Temporary password sent to your email."
+    "message": "OTP sent to your email"
+  }
+  ```
+
+#### Step B: Verify OTP
+* **URL**: `/api/auth/verify-otp`
+* **Method**: `POST`
+* **Request Body**:
+  ```json
+  {
+    "email": "fleet@transitops.com",
+    "otp": "123456"
+  }
+  ```
+* **Success Response (200 OK)**:
+  ```json
+  {
+    "message": "OTP verified successfully"
+  }
+  ```
+
+#### Step C: Reset Password
+* **URL**: `/api/auth/reset-password-otp`
+* **Method**: `POST`
+* **Request Body**:
+  ```json
+  {
+    "email": "fleet@transitops.com",
+    "otp": "123456",
+    "newPassword": "NewSecurePassword123"
+  }
+  ```
+* **Success Response (200 OK)**:
+  ```json
+  {
+    "message": "Password reset successful"
   }
   ```
 
