@@ -90,11 +90,7 @@ export const StatCard = ({ icon: Icon, label, value, sub, color = 'orange', tren
 
   return (
     <div className="relative rounded-2xl p-5 pt-7 transition-all duration-300 bg-[var(--background)] shadow-[var(--shadow-card)] hover:-translate-y-1 hover:shadow-[var(--shadow-floating)] border border-[var(--border-color)]">
-      <div className="absolute top-2.5 left-1/2 -translate-x-1/2 flex gap-1">
-        <div className="h-1 w-3 rounded-full bg-[var(--muted)] shadow-[inset_1px_1px_1px_rgba(0,0,0,0.1)] dark:shadow-[inset_1px_1px_1px_rgba(0,0,0,0.5)]" />
-        <div className="h-1 w-3 rounded-full bg-[var(--muted)] shadow-[inset_1px_1px_1px_rgba(0,0,0,0.1)] dark:shadow-[inset_1px_1px_1px_rgba(0,0,0,0.5)]" />
-        <div className="h-1 w-3 rounded-full bg-[var(--muted)] shadow-[inset_1px_1px_1px_rgba(0,0,0,0.1)] dark:shadow-[inset_1px_1px_1px_rgba(0,0,0,0.5)]" />
-      </div>
+
 
       <div className="flex items-start justify-between mb-3">
         <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-[var(--background)] shadow-[var(--shadow-recessed)] border border-[var(--border-color)] ${colors[color] || colors.orange}`}>

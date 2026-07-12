@@ -162,6 +162,9 @@ export default function Login() {
               </label>
               <input
                 type="email"
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
                 value={form.email}
                 onChange={e => {
                   setForm({ ...form, email: e.target.value });
@@ -185,6 +188,7 @@ export default function Login() {
               <div className="relative">
                 <input
                   type={showPass ? 'text' : 'password'}
+                  autoComplete="new-password"
                   value={form.password}
                   onChange={e => {
                     setForm({ ...form, password: e.target.value });
@@ -220,6 +224,20 @@ export default function Login() {
                 </>
               ) : 'Sign In'}
             </button>
+            
+            <p style={{ textAlign: 'center', marginTop: '12px', fontSize: '13px' }}>
+              <span style={{ color: '#64748b' }}>Forgot your password? </span>
+              <button
+                type="button"
+                onClick={() => toast('Please contact your Fleet Manager to reset your password.')}
+                style={{
+                  background: 'none', border: 'none', color: '#22c55e',
+                  cursor: 'pointer', fontSize: '13px', textDecoration: 'underline'
+                }}
+              >
+                Get help
+              </button>
+            </p>
           </form>
 
           {/* Demo credentials */}
@@ -232,6 +250,7 @@ export default function Login() {
                 <button
                   key={u.email}
                   onClick={() => fillDemo(u)}
+                  title={`Password: ${u.password}`}
                   className="text-left p-3 rounded-xl bg-[var(--background)] border border-[var(--border-color)] shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-floating)] hover:border-[var(--accent)]/40 active:shadow-[var(--shadow-pressed)] hover:-translate-y-[1px] active:translate-y-[1px] transition-all duration-150 text-xs font-mono"
                 >
                   <div className={`font-bold ${u.color}`}>{u.label}</div>
@@ -241,6 +260,21 @@ export default function Login() {
                 </button>
               ))}
             </div>
+          </div>
+
+          <div style={{
+            marginTop: '12px', padding: '10px 12px',
+            background: 'rgba(34,197,94,0.08)',
+            border: '1px solid rgba(34,197,94,0.2)',
+            borderRadius: '10px', fontSize: '11px', color: '#64748b'
+          }}>
+            <p style={{ fontWeight: '600', color: '#94a3b8', marginBottom: '6px' }}>
+              ROLE ACCESS GUIDE
+            </p>
+            <p>Fleet Manager — Full access to all modules</p>
+            <p>Dispatcher — Fleet, Drivers, Trips</p>
+            <p>Safety Officer — Dashboard, Drivers</p>
+            <p>Financial Analyst — Dashboard, Fuel, Reports</p>
           </div>
         </div>
       </div>

@@ -203,6 +203,15 @@ export default function AppLayout() {
             <Menu size={20} />
           </button>
 
+          <div className="ml-4 lg:ml-0">
+            <div style={{ fontSize: '12px', color: '#22c55e', fontWeight: '600' }}>
+              Welcome back, {user?.name}!
+            </div>
+            <div style={{ fontSize: '11px', color: '#64748b' }}>
+              Logged in as {ROLE_LABELS[user?.role]}
+            </div>
+          </div>
+
           <div className="flex items-center gap-2 ml-auto">
             {/* Live status dot */}
             <div className="flex items-center gap-2 text-[10px] font-mono font-bold tracking-wider text-success">

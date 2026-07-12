@@ -24,7 +24,7 @@ export default function Dashboard() {
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
-    type: '', region: ''
+    type: '', status: '', region: ''
   });
   const { theme } = useAuthStore();
   const isDark = theme === 'dark';
@@ -99,8 +99,8 @@ export default function Dashboard() {
         action={
           <div className="flex gap-2 flex-wrap">
             {[
-              { key: 'type', options: ['VAN','TRUCK','BUS','BIKE','CAR'], label: 'Type: All' },
-              { key: 'region', options: ['North','South','East','West'], label: 'Region: All' },
+              { key: 'type', options: ['VAN', 'TRUCK', 'BUS', 'BIKE', 'CAR'], label: 'Type: All' },
+              { key: 'region', options: ['North', 'South', 'East', 'West'], label: 'Region: All' },
             ].map(f => (
               <select
                 key={f.key}
@@ -159,7 +159,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {alerts.map(alert => (
               <div key={alert.vehicleId}
-                   className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border border-warning/20 bg-warning/5 text-text-main shadow-[var(--shadow-card)]">
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl border-l-4 border-l-warning border-y border-r border-[var(--border-color)] bg-panel hover:bg-panel/85 hover:-translate-y-0.5 transition-all duration-200 text-text-main shadow-[var(--shadow-card)] hover:shadow-[0_0_15px_rgba(245,158,11,0.08)]">
                 <div className="flex items-start gap-3">
                   <Wrench size={18} className="text-warning shrink-0 mt-0.5" />
                   <div>
@@ -167,7 +167,7 @@ export default function Dashboard() {
                       {alert.vehicleName} ({alert.registrationNo})
                     </h4>
                     <p className="text-xs mt-1 text-text-sub">
-                      Traveled <strong>{alert.kmSinceService.toLocaleString()} km</strong> since last service.
+                      Traveled <strong className="font-mono text-warning">{alert.kmSinceService.toLocaleString()} km</strong> since last service.
                     </p>
                   </div>
                 </div>
@@ -191,31 +191,45 @@ export default function Dashboard() {
           <SectionHeader icon={Activity} title="Fleet Status Distribution" />
           {pieData.length > 0 ? (
             <>
-              <ResponsiveContainer width="100%" height={200}>
-                <PieChart>
-                  <Pie data={pieData} dataKey="value"
-                       nameKey="name" cx="50%" cy="50%"
-                       outerRadius={80} innerRadius={40}>
-                    {pieData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      background: 'var(--background)',
-                      border: `1px solid var(--border-shadow)`,
-                      borderRadius: '8px', fontSize: '12px', color: 'var(--text-main)'
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex flex-wrap gap-3 mt-2 justify-center">
+              <div className="relative flex justify-center items-center h-[200px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={pieData} dataKey="value"
+                      nameKey="name" cx="50%" cy="50%"
+                      outerRadius={80} innerRadius={55}
+                      paddingAngle={3}
+                      isAnimationActive
+                      animationBegin={0}
+                      animationDuration={800}>
+                      {pieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        background: 'var(--foreground)',
+                        border: `1px solid var(--border-color)`,
+                        borderRadius: '10px', fontSize: '12px', color: 'var(--text-primary)'
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-2xl font-black font-mono text-[var(--text-primary)]">
+                    {pieData.reduce((acc, curr) => acc + curr.value, 0)}
+                  </span>
+                  <span className="text-[9px] uppercase tracking-widest font-extrabold text-[var(--text-muted)]">
+                    Vehicles
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3 mt-4 justify-center">
                 {pieData.map(d => (
                   <div key={d.name}
-                    className="flex items-center gap-1.5 text-xs">
-                    <div className="w-2.5 h-2.5 rounded-full"
-                         style={{ background: d.color }} />
-                    <span className="text-text-sub font-mono">
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--muted)]/10 border border-[var(--border-color)] text-xs font-semibold shadow-[var(--shadow-recessed)]">
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ background: d.color, boxShadow: `0 0 6px ${d.color}` }} />
+                    <span className="text-[var(--text-muted)] font-mono">
                       {d.name} ({d.value})
                     </span>
                   </div>
@@ -234,23 +248,33 @@ export default function Dashboard() {
           <SectionHeader icon={Route} title="Recent Trips" />
           {recentTrips?.length > 0 ? (
             <div className="space-y-3">
-              {recentTrips.map(trip => (
-                <div key={trip.id}
-                  className="flex items-center justify-between p-3 rounded-xl text-sm bg-chassis shadow-[var(--shadow-recessed)]">
-                  <div className="min-w-0">
-                    <div className="font-mono font-semibold text-xs text-accent">
-                      {trip.tripCode}
+              {recentTrips.map(trip => {
+                const isCompleted = trip.status === 'COMPLETED';
+                const isOnTrip = trip.status === 'ON_TRIP';
+                const statusBorder = isCompleted
+                  ? 'border-l-success'
+                  : isOnTrip
+                  ? 'border-l-blue-500'
+                  : 'border-l-warning';
+
+                return (
+                  <div key={trip.id}
+                    className={`flex items-center justify-between p-3.5 rounded-xl text-sm bg-[var(--muted)]/20 hover:bg-[var(--muted)]/30 hover:-translate-y-0.5 border-l-4 ${statusBorder} border-y border-r border-[var(--border-color)] transition-all duration-200 shadow-[var(--shadow-recessed)]`}>
+                    <div className="min-w-0">
+                      <div className="font-mono font-semibold text-xs text-accent">
+                        {trip.tripCode}
+                      </div>
+                      <div className="font-medium truncate mt-0.5 text-text-main">
+                        {trip.source} → {trip.destination}
+                      </div>
+                      <div className="text-xs mt-0.5 text-text-sub">
+                        {trip.vehicle.registrationNo} · {trip.driver.name}
+                      </div>
                     </div>
-                    <div className="font-medium truncate mt-0.5 text-text-main">
-                      {trip.source} → {trip.destination}
-                    </div>
-                    <div className="text-xs mt-0.5 text-text-sub">
-                      {trip.vehicle.registrationNo} · {trip.driver.name}
-                    </div>
+                    <StatusBadge status={trip.status} />
                   </div>
-                  <StatusBadge status={trip.status} />
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="h-48 flex flex-col items-center justify-center text-text-sub gap-2 font-mono uppercase tracking-wider">
