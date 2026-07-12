@@ -1,4 +1,4 @@
-<h1 align="center"><img src="assets/logo.svg" alt="TransitOps Logo" width="40" align="middle" /> TransitOps</h1>
+<h1 align="center"><img src="assets/logo.svg" alt="TransitOps Logo" width="40" align="middle" />&nbsp;&nbsp;TransitOps</h1>
 <p align="center"><strong>Smart Transport Operations Platform</strong></p>
 
 <p align="center">
